@@ -1,4 +1,4 @@
-# Home CCTV Abnormal Behavior Monitoring System
+# 홈 CCTV 이상행동 탐지 시스템
 
 ## Introduction
 본 프로젝트는 홈 CCTV를 통해 이상행동을 실시간으로 탐지하는 인공지능 기반 시스템을 개발하는 것을 목표로 합니다. 이 시스템은 SceneGraph 기술을 활용하여 주거 공간에서의 비정상적인 행동 패턴을 인식하고, 즉시 사용자에게 알림을 제공함으로써 보다 빠르고 효과적인 대응을 가능하게 합니다.
