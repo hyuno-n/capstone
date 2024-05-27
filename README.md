@@ -22,11 +22,7 @@
 - **하드웨어**: Compatible with various IP cameras and personal devices
 
 ## How to install
-```bash
-# Follow local setup instructions here
->>>>>>> 316df6a7d789f0148c7c32520dc7142855a6859d
 
-<<<<<<< HEAD
 # Scene Graph Generate:
 
 
