@@ -1,73 +1,106 @@
-import 'package:flutter/material.dart';
-//import 'package:flutter/foundation.dart';
-import 'package:flutter_naver_map/flutter_naver_map.dart';
+import 'package:flutter/cupertino.dart';
 
+/// Flutter code sample for [CupertinoSliverNavigationBar].
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
+void main() => runApp(const SliverNavBarApp());
 
-  await NaverMapSdk.instance.initialize(
-      clientId: '5guw396k77',
-      onAuthFailed: (ex) {
-        print("********* 네이버맵 인증오류 : $ex *********");
-      });
-}
+class SliverNavBarApp extends StatelessWidget {
+  const SliverNavBarApp({super.key});
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-        useMaterial3: true,
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return const CupertinoApp(
+      theme: CupertinoThemeData(brightness: Brightness.light),
+      home: SliverNavBarExample(),
     );
   }
 }
 
-class MyHomePage extends StatelessWidget {
-  const MyHomePage({super.key, required String title});
+class SliverNavBarExample extends StatelessWidget {
+  const SliverNavBarExample({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: NaverMap(
-        options: const NaverMapViewOptions(),
-        onMapReady: (controller) {
-          print("네이버 맵 로딩됨!");
-        },
+    return CupertinoPageScaffold(
+      // A ScrollView that creates custom scroll effects using slivers.
+      child: CustomScrollView(
+        // A list of sliver widgets.
+        slivers: <Widget>[
+          const CupertinoSliverNavigationBar(
+            leading: Icon(CupertinoIcons.person_2),
+            // This title is visible in both collapsed and expanded states.
+            // When the "middle" parameter is omitted, the widget provided
+            // in the "largeTitle" parameter is used instead in the collapsed state.
+            largeTitle: Text('Contacts'),
+            trailing: Icon(CupertinoIcons.add_circled),
+          ),
+          // This widget fills the remaining space in the viewport.
+          // Drag the scrollable area to collapse the CupertinoSliverNavigationBar.
+          SliverFillRemaining(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                const Text('Drag me up', textAlign: TextAlign.center),
+                CupertinoButton.filled(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute<Widget>(
+                        builder: (BuildContext context) {
+                          return const NextPage();
+                        },
+                      ),
+                    );
+                  },
+                  child: const Text('Go to Next Page'),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class LocationClass extends NLatLng {
-  @override
-  final double latitude;
-  @override
-  final double longitude;
+class NextPage extends StatelessWidget {
+  const NextPage({super.key});
 
-  const LocationClass({required this.latitude, required this.longitude})
-      : super(latitude, longitude);
+  @override
+  Widget build(BuildContext context) {
+    final Brightness brightness = CupertinoTheme.brightnessOf(context);
+    return CupertinoPageScaffold(
+      child: CustomScrollView(
+        slivers: <Widget>[
+          CupertinoSliverNavigationBar(
+            backgroundColor: CupertinoColors.systemYellow,
+            border: Border(
+              bottom: BorderSide(
+                color: brightness == Brightness.light
+                    ? CupertinoColors.black
+                    : CupertinoColors.white,
+              ),
+            ),
+            // The middle widget is visible in both collapsed and expanded states.
+            middle: const Text('Contacts Group'),
+            // When the "middle" parameter is implemented, the largest title is only visible
+            // when the CupertinoSliverNavigationBar is fully expanded.
+            largeTitle: const Text('Family'),
+          ),
+          const SliverFillRemaining(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: <Widget>[
+                Text('Drag me up', textAlign: TextAlign.center),
+                // When the "leading" parameter is omitted on a route that has a previous page,
+                // the back button is automatically added to the leading position.
+                Text('Tap on the leading button to navigate back',
+                    textAlign: TextAlign.center),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
