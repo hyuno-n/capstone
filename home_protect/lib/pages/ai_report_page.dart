@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
-import 'package:home_protect/components/ai_report_widget.dart';
+import 'package:flutter_svg/flutter_svg.dart';
+import 'package:home_protect/components/ai_report.dart';
 import 'package:home_protect/components/drawer_widget.dart';
 import 'package:home_protect/components/enddrawer_widget.dart';
 
-// ignore: camel_case_types
-class AI_report extends StatelessWidget {
-  const AI_report({super.key});
+class AiReportPage extends StatelessWidget {
+  const AiReportPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -14,7 +13,7 @@ class AI_report extends StatelessWidget {
       appBar: AppBar(
         elevation: 1.2,
         title: const Text(
-          "AI report",
+          "AI Report",
           style: TextStyle(fontSize: 15),
         ),
         centerTitle: true,
@@ -42,7 +41,7 @@ class AI_report extends StatelessWidget {
       drawer: const DrawerWidget(),
       endDrawer: const EndDrawerWidget(),
       body: const Center(
-        child: AiWidget(),
+        child: AiReport(),
       ),
     );
   }
