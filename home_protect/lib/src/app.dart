@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:home_protect/controller/app_controller.dart';
-import 'package:home_protect/pages/ai_report.dart';
+import 'package:home_protect/pages/ai_report_page.dart';
 import 'package:home_protect/pages/detection_range.dart';
 import 'package:home_protect/pages/monitoring.dart';
 import 'package:home_protect/pages/user_page.dart';
@@ -19,7 +19,7 @@ class App extends GetView<AppController> {
             return const Monitoring();
           //break;
           case RouteName.AI_report:
-            return const AI_report();
+            return const AiReportPage();
           //break;
           case RouteName.Detection_range:
             return const Detection_range();
