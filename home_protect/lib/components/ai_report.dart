@@ -33,9 +33,6 @@ class _AiReportState extends State<AiReport> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('AI Report'),
-      ),
       body: ListView(
         children: alarms.map((alarm) {
           return AiWidget(
@@ -47,7 +44,7 @@ class _AiReportState extends State<AiReport> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addAlarm,
-        child: Icon(Icons.add),
+        child: const Icon(Icons.add),
       ),
     );
   }
