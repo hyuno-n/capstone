@@ -54,15 +54,23 @@
 <aside>
 ☝ 안지킨 사례
 
+<<<<<<< HEAD
 ![Untitled (2)](https://github.com/hyuno-n/capstone/assets/69071499/38834d6d-d5d1-4ea3-8547-7ce821786186)
 
+=======
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/4b8b9937-a26c-4f16-8de2-d4fbfbd97094/Untitled.png)
+>>>>>>> a8f7b502a176312ffd09eaefb07f2d109980e29e
 
 </aside>
 
 <aside>
 ☝ 지킨 사례
 
+<<<<<<< HEAD
 ![Untitled (1)](https://github.com/hyuno-n/capstone/assets/69071499/92684500-753c-4587-8924-1277cb02ce50)
+=======
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/5ffba8b7-ca0d-43a9-9b60-c075e61137a5/Untitled.png)
+>>>>>>> a8f7b502a176312ffd09eaefb07f2d109980e29e
 
 </aside>
 
@@ -82,6 +90,10 @@ git commit -m "FEAT: 회원가입 기능 추가
 - 회원가입 기능 추가"
 ```
 
+<<<<<<< HEAD
 ![Untitled](https://github.com/hyuno-n/capstone/assets/69071499/e7dadefa-2c17-4f75-8665-98dca1ace069)
+=======
+![Untitled](https://s3-us-west-2.amazonaws.com/secure.notion-static.com/335eb35f-5297-403d-8fde-2343a41a5c66/Untitled.png)
+>>>>>>> a8f7b502a176312ffd09eaefb07f2d109980e29e
 
 </aside>
