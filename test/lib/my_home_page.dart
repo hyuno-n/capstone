@@ -29,6 +29,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> getMessage() async {
     try {
+      print('Fetching message...');
       final response = await MessageService.getMessage();
 
       setState(() {
@@ -47,6 +48,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   Future<void> sendMessage(String newMessage) async {
     try {
+      print('Sending message...');
       final response = await MessageService.setMessage(newMessage);
 
       setState(() {
@@ -65,6 +67,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+    print('Building UI...');
     return Scaffold(
       appBar: AppBar(
         title: Text('Message Passing Example'),
