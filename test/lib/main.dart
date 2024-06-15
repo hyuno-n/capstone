@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -24,20 +25,39 @@ class MyHomePage extends StatefulWidget {
 
 class _MyHomePageState extends State<MyHomePage> {
   late IO.Socket _socket;
+  late FlutterLocalNotificationsPlugin _localNotifications;
 
   @override
   void initState() {
     super.initState();
+    _initializeLocalNotifications();
     _connectToSocket();
   }
 
+  void _initializeLocalNotifications() {
+    _localNotifications = FlutterLocalNotificationsPlugin();
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    final InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    _localNotifications.initialize(initializationSettings);
+  }
+
   void _connectToSocket() {
+    final String? flaskIp = dotenv.env['FLASK_IP'];
+    final String? flaskPort = dotenv.env['FLASK_PORT'];
+
+    if (flaskIp == null || flaskPort == null) {
+      print("FLASK_IP or FLASK_PORT is not set in .env file");
+      return;
+    }
+
     _socket = IO.io(
-        'http://${dotenv.env['FLASK_IP']}:${dotenv.env['FLASK_PORT']}',
-        <String, dynamic>{
-          'transports': ['websocket'],
-          'autoConnect': false,
-        });
+        'http://$flaskIp:$flaskPort',
+        IO.OptionBuilder()
+            .setTransports(['websocket']) // for Flutter or Dart VM
+            .disableAutoConnect() // disable auto-connection
+            .build());
 
     _socket.connect();
 
@@ -52,21 +72,24 @@ class _MyHomePageState extends State<MyHomePage> {
     _socket.on('disconnect', (_) => print('Disconnected from socket'));
   }
 
-  void _showPushMessage(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Push Notification'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: Text('OK'),
-          ),
-        ],
-      ),
+  Future<void> _showPushMessage(String? message) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'your_channel_id',
+      'your_channel_name',
+      channelDescription: 'your_channel_description',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+    await _localNotifications.show(
+      0,
+      'Push Notification',
+      message,
+      platformChannelSpecifics,
+      payload: 'item x',
     );
   }
 
