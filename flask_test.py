@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
+from datetime import datetime
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'secret!'
@@ -23,15 +24,25 @@ def handle_disconnect():
 
 @socketio.on('push_message')
 def handle_message(data):
-    message = data['message']
-    print(f"Received message: {message}")
-    emit('response', {'message': f"Server received: {message}"})
+    print(f"Received message: {data}")
+    emit('response', {'message': f"Server received: {data}"})
 
 @app.route('/set_message', methods=['POST'])
 def set_message():
-    message = request.json.get('message')
-    print(f"Received message via HTTP POST: {message}")
-    socketio.emit('push_message', {'message': f"Server received via HTTP POST: {message}"})
+    data = request.json
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+    
+    timestamp = data.get('timestamp', 'No timestamp')
+    action_name = data.get('action_name', 'No action name')
+    camera_number = data.get('camera_number', 'No camera number')
+
+    print(f"Received message via HTTP POST: {data}")
+    socketio.emit('push_message', {
+        'timestamp': timestamp,
+        'action_name': action_name,
+        'camera_number': camera_number
+    })
     return jsonify({"message": "Message received"}), 200
 
 if __name__ == '__main__':

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/intl.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -26,6 +27,7 @@ class MyHomePage extends StatefulWidget {
 class _MyHomePageState extends State<MyHomePage> {
   late IO.Socket _socket;
   late FlutterLocalNotificationsPlugin _localNotifications;
+  List<Map<String, String>> _logs = [];
 
   @override
   void initState() {
@@ -66,13 +68,33 @@ class _MyHomePageState extends State<MyHomePage> {
     });
 
     _socket.on('push_message', (data) {
-      _showPushMessage(data['message']);
+      String? timestamp = data['timestamp'];
+      String? actionName = data['action_name'];
+      String? cameraNumber = data['camera_number'].toString();
+
+      _showPushMessage(actionName);
+
+      setState(() {
+        _logs.add({
+          'timestamp': _formatTimestamp(timestamp),
+          'action_name': actionName ?? 'No action name',
+          'camera_number': cameraNumber ?? 'No camera number',
+        });
+      });
     });
 
     _socket.on('disconnect', (_) => print('Disconnected from socket'));
   }
 
-  Future<void> _showPushMessage(String? message) async {
+  String _formatTimestamp(String? timestamp) {
+    if (timestamp == null) return 'No timestamp';
+    DateTime parsedTime = DateTime.parse(timestamp);
+    String date = DateFormat('yyyy-MM-dd').format(parsedTime);
+    String time = DateFormat('HH:mm:ss').format(parsedTime);
+    return '$date\n$time';
+  }
+
+  Future<void> _showPushMessage(String? actionName) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'your_channel_id',
@@ -86,11 +108,17 @@ class _MyHomePageState extends State<MyHomePage> {
         NotificationDetails(android: androidPlatformChannelSpecifics);
     await _localNotifications.show(
       0,
-      'Push Notification',
-      message,
+      'Action Detected',
+      actionName,
       platformChannelSpecifics,
       payload: 'item x',
     );
+  }
+
+  void _clearLogs() {
+    setState(() {
+      _logs.clear();
+    });
   }
 
   @override
@@ -104,9 +132,29 @@ class _MyHomePageState extends State<MyHomePage> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Flutter Push Notification'),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: _clearLogs,
+          ),
+        ],
       ),
-      body: Center(
-        child: Text('Waiting for message...'),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              itemCount: _logs.length,
+              itemBuilder: (context, index) {
+                final log = _logs[index];
+                return ListTile(
+                  title: Text('Action: ${log['action_name']}'),
+                  subtitle: Text(
+                      'Time: ${log['timestamp']} | Camera: ${log['camera_number']}'),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
