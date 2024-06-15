@@ -8,7 +8,7 @@ from datetime import datetime
 load_dotenv()
 
 def push_message(action_name, camera_number=1):
-    url = f"http://{os.getenv('FLASK_APP_IP')}:{os.getenv('FLASK_APP_PORT')}/set_message"
+    url = f"http://{os.getenv('FLASK_APP_IP', '127.0.0.1')}:{os.getenv('FLASK_APP_PORT', '5000')}/set_message"
     headers = {'Content-Type': 'application/json'}
     data = {
         'timestamp': datetime.now().isoformat(),
@@ -21,7 +21,7 @@ def push_message(action_name, camera_number=1):
     if response.status_code == 200:
         print('Message pushed successfully:', response.json())
     else:
-        print('Failed to push message:', response.json())
+        print('Failed to push message:', response.text)
 
 if __name__ == '__main__':
     action_name = input("Enter the action name: ")
