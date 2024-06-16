@@ -12,9 +12,9 @@ class LogList extends StatelessWidget {
       itemBuilder: (context, index) {
         final log = logs[index];
         return ListTile(
-          title: Text('Action: ${log['action_name']}'),
+          title: Text('Event: ${log['eventname']}'),
           subtitle: Text(
-              'Time: ${log['timestamp']} | Camera: ${log['camera_number']}'),
+              'ID: ${log['id']} | Time: ${log['timestamp']} | Camera: ${log['camera_number']}'),
         );
       },
     );

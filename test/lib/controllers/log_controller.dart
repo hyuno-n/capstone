@@ -40,15 +40,17 @@ class LogController {
     });
 
     socket.on('push_message', (data) {
+      String? id = data['id'].toString();
       String? timestamp = data['timestamp'];
-      String? actionName = data['action_name'];
+      String? eventname = data['eventname'];
       String? cameraNumber = data['camera_number'].toString();
 
-      _showPushMessage(actionName);
+      _showPushMessage(eventname);
 
       logs.add({
+        'id': id ?? 'No id',
         'timestamp': _formatTimestamp(timestamp),
-        'action_name': actionName ?? 'No action name',
+        'eventname': eventname ?? 'No event name',
         'camera_number': cameraNumber ?? 'No camera number',
       });
 
@@ -66,7 +68,7 @@ class LogController {
     return '$date\n$time';
   }
 
-  Future<void> _showPushMessage(String? actionName) async {
+  Future<void> _showPushMessage(String? eventname) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'your_channel_id',
@@ -80,8 +82,8 @@ class LogController {
         NotificationDetails(android: androidPlatformChannelSpecifics);
     await localNotifications.show(
       0,
-      'Action Detected',
-      actionName,
+      'Event Detected',
+      eventname,
       platformChannelSpecifics,
       payload: 'item x',
     );
