@@ -4,8 +4,6 @@ import 'package:get/get.dart';
 import 'package:home_protect/binding/init_binding.dart';
 import 'package:home_protect/pages/login_page.dart';
 import 'package:home_protect/pages/splash_screen.dart';
-import 'package:home_protect/controller/user_controller.dart';
-import 'package:home_protect/controller/log_controller.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");

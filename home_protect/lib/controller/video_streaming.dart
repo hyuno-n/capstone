@@ -24,7 +24,7 @@ class StreamingPage extends StatefulWidget {
 class _StreamingPageState extends State<StreamingPage> {
   late VlcPlayerController vlcViewController;
   final String rtspUrl =
-      "http://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4";
+      "rtsp://jaehoon010:asdang22@192.168.35.116:554/stream1";
   double _volume = 100.0;
 
   @override
