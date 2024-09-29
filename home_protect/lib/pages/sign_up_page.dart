@@ -1,12 +1,15 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // flutter_localizations 추가
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:home_protect/components/validator.dart';
 import 'package:home_protect/pages/login_page.dart';
 import 'package:kpostal/kpostal.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
-class Sign_up_Page extends StatelessWidget {
-  const Sign_up_Page({super.key});
+class SignUpPage extends StatelessWidget {
+  const SignUpPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -21,7 +24,6 @@ class Sign_up_Page extends StatelessWidget {
       supportedLocales: [
         Locale('en', ''), // English, no country code
         Locale('ko', ''), // Korean, no country code
-        // 다른 필요한 로케일 추가
       ],
       home: SignUpPageContent(),
     );
@@ -54,14 +56,14 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
 
   @override
   void dispose() {
-    _nameController.dispose(); // 이름 dispose
-    _emailController.dispose(); // 이메일 dispose
-    _passwordController.dispose(); // 비밀번호 dispose
-    _confirmPasswordController.dispose(); // 비밀번호 확인 dispose
-    _phoneController.dispose(); // 전화번호 dispose
-    _addressController.dispose(); // 주소 dispose
-    _baseAddressController.dispose(); // 기본주소 dispose
-    _detailedAddressController.dispose(); // 상세주소 dispose
+    _nameController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _phoneController.dispose();
+    _addressController.dispose();
+    _baseAddressController.dispose();
+    _detailedAddressController.dispose();
     super.dispose();
   }
 
@@ -76,13 +78,65 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
     });
   }
 
+  Future<void> _registerUser(BuildContext context) async {
+    if (_formKey.currentState?.validate() ?? false) {
+      final String id = _nameController.text;
+      final String email = _emailController.text;
+      final String password = _passwordController.text;
+      final String phone = _phoneController.text;
+      final String address = _addressController.text;
+      final String detailedAddress = _detailedAddressController.text;
+
+      final String? flaskAppIp = dotenv.env['FLASK_IP'];
+      final String? flaskAppPort = dotenv.env['FLASK_PORT'];
+      final String url = 'http://$flaskAppIp:$flaskAppPort/add_user';
+
+      try {
+        final response = await http.post(
+          Uri.parse(url),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'id': id,
+            'email': email,
+            'password': password, // 비밀번호 필드 추가
+            'phone': phone,
+            'address': address,
+            'detailed_address': detailedAddress,
+          }),
+        );
+
+        if (response.statusCode == 200) {
+          final responseData = jsonDecode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+                content: Text(
+                    'User added successfully: ${responseData['message']}')),
+          );
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const Login_Page()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add user: ${response.body}')),
+          );
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text("Sign up"),
+    return Scaffold(
+      // CupertinoPageScaffold를 Scaffold로 변경
+      appBar: AppBar(
+        title: const Text("Sign up"),
       ),
-      child: SafeArea(
+      body: SafeArea(
         child: CupertinoScrollbar(
           child: SingleChildScrollView(
             child: Padding(
@@ -93,13 +147,13 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      "이름",
+                      "아이디",
                       style: TextStyle(fontSize: 16),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
                       controller: _nameController,
-                      placeholder: "Enter your name",
+                      placeholder: "Enter your id",
                       onChanged: (value) {
                         setState(() {
                           _nameError = validateName(value);
@@ -221,14 +275,12 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                           child: const Text("우편번호 찾기"),
                           onPressed: () {
                             Navigator.of(context).push(CupertinoPageRoute(
-                              //Kpostal 주소찾기 API 활용
                               builder: (context) {
                                 return KpostalView(callback: (Kpostal result) {
                                   setState(() {
-                                    _addressController.text =
-                                        result.postCode; //주소에 번지수 들어감
+                                    _addressController.text = result.postCode;
                                     _baseAddressController.text =
-                                        result.address; //기본주소에 주소명 들어감
+                                        result.address;
                                   });
                                 });
                               },
@@ -265,8 +317,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                         onPressed: () {
                           _validateInputs();
                           if (_formKey.currentState!.validate() &&
-                              _nameController.text
-                                  .isNotEmpty && // 회원가입 Field가 비워져있는지 아닌지 판별
+                              _nameController.text.isNotEmpty &&
                               _emailController.text.isNotEmpty &&
                               _passwordController.text.isNotEmpty &&
                               _confirmPasswordController.text.isNotEmpty &&
@@ -274,36 +325,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                               _addressController.text.isNotEmpty &&
                               _baseAddressController.text.isNotEmpty &&
                               _detailedAddressController.text.isNotEmpty) {
-                            // Handle sign up action
-                            print("Name: ${_nameController.text}, "
-                                "Email: ${_emailController.text}, "
-                                "Password: ${_passwordController.text}, "
-                                "Confirm Password: ${_confirmPasswordController.text}, "
-                                "Phone: ${_phoneController.text}, "
-                                "Address: ${_addressController.text}, "
-                                "Base Address: ${_baseAddressController.text}, "
-                                "Detailed Address: ${_detailedAddressController.text}");
-                            showDialog(
-                              context: context,
-                              builder: (BuildContext context) {
-                                return CupertinoAlertDialog(
-                                  title: const Text('회원가입 완료'),
-                                  content: const Text('회원가입이 완료되었습니다.'),
-                                  actions: <Widget>[
-                                    CupertinoDialogAction(
-                                      child: const Text('OK'),
-                                      onPressed: () {
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                              builder: (context) =>
-                                                  const Login_Page()),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                );
-                              },
-                            );
+                            _registerUser(context);
                           } else {
                             showDialog(
                               context: context,
