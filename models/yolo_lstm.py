@@ -3,7 +3,10 @@ import numpy as np
 import cv2
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from collections import defaultdict
 
+# Store the track history
+track_history = defaultdict(lambda: [])
 
 CONFIDENCE_THRESHOLD = 0.6
 GREEN = (0, 255, 0)
@@ -34,15 +37,24 @@ fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 out = cv2.VideoWriter('output_video.mp4', fourcc, 30.0, (output_width, output_height))
 
 def detect_people_and_keypoints(frame):
+    track_ids = []  # 기본값으로 빈 리스트 설정
+    keypoints_list = []
+    track = []
     try:
-        results = yolo_model(frame, persist=True)
+        results = yolo_model.track(frame, persist=True)
         keypoints = results[0].keypoints
         boxes = results[0].boxes.xyxy.cpu().numpy()  # 경계 상자 정보
         track_ids = results[0].boxes.id.int().cpu().tolist()
     except AttributeError as e:
         print(e)
-    keypoints_list = []
 
+    # Plot the tracks
+    for box, track_id in zip(boxes, track_ids):
+        x, y, w, h = box
+        track = track_history[track_id]
+        track.append((float(x), float(y)))  # x, y center point
+        if len(track) > 30:  # retain 90 tracks for 90 frames
+            track.pop(0)
     if keypoints is not None and len(keypoints) > 0:
         for kp in keypoints:
             kps = kp.xy[0].cpu().numpy()  # (17, 2) 형태의 numpy 배열
@@ -50,7 +62,7 @@ def detect_people_and_keypoints(frame):
     else:
         print("No keypoints detected.")
 
-    return keypoints_list, boxes
+    return keypoints_list, boxes, track
 
 def preprocess_keypoints(keypoints):
     if keypoints.shape[0] == 0:
@@ -77,14 +89,14 @@ def draw_skeletons(frame, keypoints_list, boxes):
     return frame
 
 while cap.isOpened():
-    ret, frame = cap.read()
-    if not ret:
+    succes, frame = cap.read()
+    if not succes:
         break
     
     # 프레임을 1920x1080으로 리사이즈
     frame = cv2.resize(frame, (output_width, output_height))
 
-    keypoints_list, boxes = detect_people_and_keypoints(frame)
+    keypoints_list, boxes, track = detect_people_and_keypoints(frame)
 
     predicted_label = default_class
 
@@ -94,6 +106,11 @@ while cap.isOpened():
         predictions = lstm_model.predict(preprocessed_keypoints)
         predicted_class = np.argmax(predictions, axis=1)[0]
         predicted_label = classes[predicted_class]
+       
+    if track: 
+        # Draw the tracking lines
+        points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+        cv2.polylines(frame, [points], isClosed=False, color=(230, 230, 230), thickness=10)
 
     # 예측 결과 표시
     cv2.putText(frame, predicted_label, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
