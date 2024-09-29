@@ -5,9 +5,7 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 from collections import defaultdict
 
-# Store the track history
-track_history = defaultdict(lambda: [])
-
+# 전역 상수 정의
 CONFIDENCE_THRESHOLD = 0.6
 GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
@@ -36,37 +34,44 @@ output_height = 1080
 fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
 out = cv2.VideoWriter('output_video.mp4', fourcc, 30.0, (output_width, output_height))
 
+# 객체 추적 이력을 저장하기 위한 defaultdict
+track_history = defaultdict(lambda: [])
+
 def detect_people_and_keypoints(frame):
-    track_ids = []  # 기본값으로 빈 리스트 설정
+    """주어진 프레임에서 사람 및 키포인트 탐지"""
+    track_ids = []
     keypoints_list = []
-    track = []
+    
     try:
         results = yolo_model.track(frame, persist=True)
         keypoints = results[0].keypoints
         boxes = results[0].boxes.xyxy.cpu().numpy()  # 경계 상자 정보
         track_ids = results[0].boxes.id.int().cpu().tolist()
+        
+        # 객체 추적 이력 업데이트
+        update_track_history(boxes, track_ids)
+        
+        if keypoints is not None and len(keypoints) > 0:
+            for kp in keypoints:
+                kps = kp.xy[0].cpu().numpy()  # (17, 2) 형태의 numpy 배열
+                keypoints_list.append(kps)
     except AttributeError as e:
         print(e)
+    
+    return keypoints_list, boxes
 
-    # Plot the tracks
+def update_track_history(boxes, track_ids):
+    """주어진 경계 상자와 트랙 ID를 사용하여 추적 이력 업데이트"""
     for box, track_id in zip(boxes, track_ids):
-        x, y, w, h = box
+        x, y, _, _ = box
         track = track_history[track_id]
         track.append((float(x), float(y)))  # x, y center point
-        if len(track) > 30:  # retain 90 tracks for 90 frames
+        if len(track) > 30:  # 30프레임 이상 보존
             track.pop(0)
-    if keypoints is not None and len(keypoints) > 0:
-        for kp in keypoints:
-            kps = kp.xy[0].cpu().numpy()  # (17, 2) 형태의 numpy 배열
-            keypoints_list.append(kps)
-    else:
-        print("No keypoints detected.")
-
-    return keypoints_list, boxes, track
 
 def preprocess_keypoints(keypoints):
+    """키포인트 전처리"""
     if keypoints.shape[0] == 0:
-        # 키포인트가 없을 때 기본값 사용
         return default_keypoints
 
     body_keypoints_indices = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
@@ -77,6 +82,7 @@ def preprocess_keypoints(keypoints):
     return filtered_keypoints
 
 def draw_skeletons(frame, keypoints_list, boxes):
+    """프레임에 스켈레톤과 경계 상자 그리기"""
     # 경계 상자 그리기
     for box in boxes:
         x1, y1, x2, y2 = map(int, box)
@@ -86,47 +92,57 @@ def draw_skeletons(frame, keypoints_list, boxes):
     for keypoints in keypoints_list:
         for (x, y) in keypoints:
             cv2.circle(frame, (int(x), int(y)), 3, GREEN, -1)
+    
     return frame
 
-while cap.isOpened():
-    succes, frame = cap.read()
-    if not succes:
-        break
-    
-    # 프레임을 1920x1080으로 리사이즈
-    frame = cv2.resize(frame, (output_width, output_height))
+def main():
+    """비디오 프로세싱 메인 루프"""
+    while cap.isOpened():
+        success, frame = cap.read()
+        if not success:
+            break
+        
+        # 프레임을 1920x1080으로 리사이즈
+        frame = cv2.resize(frame, (output_width, output_height))
 
-    keypoints_list, boxes, track = detect_people_and_keypoints(frame)
+        keypoints_list, boxes = detect_people_and_keypoints(frame)
 
-    predicted_label = default_class
+        predicted_label = default_class
 
-    for keypoints in keypoints_list:
-        preprocessed_keypoints = preprocess_keypoints(keypoints)
-        preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
-        predictions = lstm_model.predict(preprocessed_keypoints)
-        predicted_class = np.argmax(predictions, axis=1)[0]
-        predicted_label = classes[predicted_class]
-       
-    if track: 
-        # Draw the tracking lines
-        points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-        cv2.polylines(frame, [points], isClosed=False, color=(230, 230, 230), thickness=10)
+        # 각 객체의 키포인트로 예측 수행
+        for keypoints in keypoints_list:
+            preprocessed_keypoints = preprocess_keypoints(keypoints)
+            preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
+            predictions = lstm_model.predict(preprocessed_keypoints)
+            predicted_class = np.argmax(predictions, axis=1)[0]
+            predicted_label = classes[predicted_class]
+        
+        # 객체 추적 이력을 사용하여 추적선 그리기
+        for track_id in track_history:
+            track = track_history[track_id]
+            if track: 
+                points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+                cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
 
-    # 예측 결과 표시
-    cv2.putText(frame, predicted_label, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        # 예측 결과 표시
+        cv2.putText(frame, predicted_label, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-    # 스켈레톤 및 경계 상자 그리기
-    frame = draw_skeletons(frame, keypoints_list, boxes)
-    
-    # 프레임을 비디오 파일에 기록
-    out.write(frame)
-    
-    # 프레임 표시
-    # cv2.imshow('Video', frame)
+        # 스켈레톤 및 경계 상자 그리기
+        frame = draw_skeletons(frame, keypoints_list, boxes)
+        
+        # 프레임을 비디오 파일에 기록
+        out.write(frame)
+        
+        # 프레임 표시
+        # cv2.imshow('Video', frame)
 
-    # if cv2.waitKey(1) & 0xFF == ord('q'):
-    #     break
+        # if cv2.waitKey(1) & 0xFF == ord('q'):
+        #     break
 
-cap.release()
-out.release()  # 비디오 저장 객체 해제
-cv2.destroyAllWindows()
+    # 자원 해제
+    cap.release()
+    out.release()  # 비디오 저장 객체 해제
+    cv2.destroyAllWindows()
+
+if __name__ == "__main__":
+    main()
