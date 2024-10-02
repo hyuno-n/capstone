@@ -19,11 +19,8 @@ yolo_model = YOLO("model/yolov8s-pose.pt")
 # 클래스 레이블 설정
 classes = ['Fall', 'Fall_down', 'Normal']
 
-# RTSP 스트림 주소 설정
-rtsp_url = "rtsp://username:password@camera_ip_address/stream"
-
 # 비디오 캡처 초기화
-cap = cv2.VideoCapture(rtsp_url)
+cap = cv2.VideoCapture('video/fall_down_test.mp4')
 
 # 기본값으로 설정할 키포인트와 클래스
 default_keypoints = np.zeros((12, 2))  # (12, 2) 형태로, 0,0으로 초기화
