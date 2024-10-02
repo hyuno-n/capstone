@@ -1,19 +1,18 @@
 from ultralytics import YOLO
 import numpy as np
 import cv2
-import tensorflow as tf
+import os
+import datetime
 from tensorflow.keras.models import load_model
-from collections import defaultdict
+from collections import defaultdict, deque
 
 # 전역 상수 정의
 CONFIDENCE_THRESHOLD = 0.6
 GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 
-# LSTM 모델 불러오기
+# LSTM 모델 및 YOLO 모델 불러오기
 lstm_model = load_model('model/lstm_keypoints_model.h5')
-
-# YOLO 모델 불러오기
 yolo_model = YOLO("model/yolov8s-pose.pt")
 
 # 클래스 레이블 설정
@@ -21,59 +20,55 @@ classes = ['Fall', 'Fall_down', 'Normal']
 
 # RTSP 스트림 주소 설정
 rtsp_url = "rtsp://username:password@camera_ip_address/stream"
-
-# 비디오 캡처 초기화
 cap = cv2.VideoCapture(rtsp_url)
 
 # 기본값으로 설정할 키포인트와 클래스
 default_keypoints = np.zeros((12, 2))  # (12, 2) 형태로, 0,0으로 초기화
 default_class = 'Normal'
 
-# 출력 해상도 설정
-output_width = 1920
-output_height = 1080
+# 출력 해상도 및 비디오 저장 설정
+output_width, output_height = 1920, 1080
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+fps = 30
+frame_width, frame_height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-# 비디오 저장 초기화
-fourcc = cv2.VideoWriter_fourcc(*'mp4v') 
-out = cv2.VideoWriter('output_video.mp4', fourcc, 30.0, (output_width, output_height))
+# 클립 저장을 위한 버퍼 설정
+buffer_length, post_event_length = 10 * fps, 30 * fps
+pre_event_buffer = deque(maxlen=buffer_length)
+event_detected, frames_after_event, out = False, 0, None
+track_history, object_predictions = defaultdict(list), {}
 
-# 객체 추적 이력을 저장하기 위한 defaultdict
-track_history = defaultdict(lambda: [])
-
-# 탐지 기능 온오프를 위한 변수
-detection_on = False  # 기본적으로 탐지 비활성화 상태로 시작
+# 탐지 기능 온오프 설정 및 저장 경로 초기화
+detection_on, output_dir = False, "saved_clips"
+if not os.path.exists(output_dir):
+    os.makedirs(output_dir)
 
 def detect_people_and_keypoints(frame):
     """주어진 프레임에서 사람 및 키포인트 탐지"""
-    track_ids = []
-    keypoints_list = []
+    track_ids, keypoints_list = [], []
     
     try:
         results = yolo_model.track(frame, persist=True)
         keypoints = results[0].keypoints
-        boxes = results[0].boxes.xyxy.cpu().numpy()  # 경계 상자 정보
+        boxes = results[0].boxes.xyxy.cpu().numpy()
         track_ids = results[0].boxes.id.int().cpu().tolist()
         
-        # 객체 추적 이력 업데이트
         update_track_history(boxes, track_ids)
-        
-        if keypoints is not None and len(keypoints) > 0:
+        if keypoints is not None:
             for kp in keypoints:
-                kps = kp.xy[0].cpu().numpy()  # (17, 2) 형태의 numpy 배열
-                keypoints_list.append(kps)
+                keypoints_list.append(kp.xy[0].cpu().numpy())
     except AttributeError as e:
         print(e)
     
-    return keypoints_list, boxes
+    return keypoints_list, boxes, track_ids
 
 def update_track_history(boxes, track_ids):
-    """주어진 경계 상자와 트랙 ID를 사용하여 추적 이력 업데이트"""
+    """경계 상자와 트랙 ID를 사용하여 추적 이력 업데이트"""
     for box, track_id in zip(boxes, track_ids):
         x, y, _, _ = box
-        track = track_history[track_id]
-        track.append((float(x), float(y)))  # x, y center point
-        if len(track) > 30:  # 30프레임 이상 보존
-            track.pop(0)
+        track_history[track_id].append((float(x), float(y)))
+        if len(track_history[track_id]) > 30:
+            track_history[track_id].pop(0)
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
@@ -81,20 +76,15 @@ def preprocess_keypoints(keypoints):
         return default_keypoints
 
     body_keypoints_indices = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-    if keypoints.shape[0] <= max(body_keypoints_indices):
-        raise ValueError("body_keypoints_indices contains indices out of bounds.")
-
     filtered_keypoints = keypoints[body_keypoints_indices, :2]
     return filtered_keypoints
 
-def draw_skeletons(frame, keypoints_list, boxes):
+def draw_skeletons_and_boxes(frame, keypoints_list, boxes):
     """프레임에 스켈레톤과 경계 상자 그리기"""
-    # 경계 상자 그리기
     for box in boxes:
         x1, y1, x2, y2 = map(int, box)
         cv2.rectangle(frame, (x1, y1), (x2, y2), GREEN, 2)
 
-    # 스켈레톤 그리기
     for keypoints in keypoints_list:
         for (x, y) in keypoints:
             cv2.circle(frame, (int(x), int(y)), 3, GREEN, -1)
@@ -105,61 +95,95 @@ def toggle_detection():
     """탐지 기능을 온오프하는 함수"""
     global detection_on
     detection_on = not detection_on
-    status = "ON" if detection_on else "OFF"
-    print(f"탐지 기능이 {status} 상태입니다.")
+    print(f"탐지 기능이 {'ON' if detection_on else 'OFF'} 상태입니다.")
+
+def save_event_clip(event_name, frame):
+    """이벤트가 발생하면 영상을 저장하는 함수"""
+    global out
+    if out is None:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        clip_filename = os.path.join(output_dir, f"{event_name}_{timestamp}.mp4")
+        out = cv2.VideoWriter(clip_filename, fourcc, fps, (frame_width, frame_height))
+
+        buffer_size = len(pre_event_buffer)
+        if buffer_size > 0:
+            print(f"이벤트 발생 전 {buffer_size}개의 프레임을 저장합니다.")
+            for buffered_frame in pre_event_buffer:
+                out.write(buffered_frame)
+        else:
+            print("이벤트 발생 전 저장할 프레임이 충분하지 않습니다.")
+    
+    out.write(frame)
+
+def send_alert(event_name):
+    """이벤트 발생 시 알림을 보내는 함수"""
+    print(f"경고: {event_name} 발생! 알림 전송 중...")
+
+def handle_event_detection(frame, predicted_label):
+    """이벤트 발생 감지 후 처리"""
+    global event_detected, frames_after_event
+    if predicted_label in ['Fall', 'Fall_down'] and not event_detected:
+        event_detected = True
+        frames_after_event = 0
+        print(f"{predicted_label} 감지됨!")
+        send_alert(predicted_label)
+    
+    if event_detected:
+        pre_event_buffer.append(frame)
+        save_event_clip(predicted_label, frame)
+        frames_after_event += 1
+
+        if frames_after_event >= post_event_length:
+            event_detected = False
+            out.release()
+            out = None
+            print("이벤트 클립 저장 완료.")
 
 def main():
     """비디오 프로세싱 메인 루프"""
+    global frames_after_event
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
             break
-        
-        # 프레임을 1920x1080으로 리사이즈
+
         frame = cv2.resize(frame, (output_width, output_height))
 
-        # 탐지 기능이 켜져 있는 경우에만 탐지 수행
         if detection_on:
-            keypoints_list, boxes = detect_people_and_keypoints(frame)
+            keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
             predicted_label = default_class
 
-            # 각 객체의 키포인트로 예측 수행
-            for keypoints in keypoints_list:
+            for keypoints, track_id in zip(keypoints_list, track_ids):
                 preprocessed_keypoints = preprocess_keypoints(keypoints)
                 preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
                 predictions = lstm_model.predict(preprocessed_keypoints)
                 predicted_class = np.argmax(predictions, axis=1)[0]
                 predicted_label = classes[predicted_class]
-            
-            # 객체 추적 이력을 사용하여 추적선 그리기
-            for track_id in track_history:
-                track = track_history[track_id]
-                if track: 
+                object_predictions[track_id] = predicted_label
+
+            handle_event_detection(frame, predicted_label)
+            frame = draw_skeletons_and_boxes(frame, keypoints_list, boxes)
+            for track_id, track in track_history.items():
+                if track:
                     points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                     cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
+                if track_id in object_predictions:
+                    cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
 
-            # 예측 결과 표시
-            cv2.putText(frame, predicted_label, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-
-            # 스켈레톤 및 경계 상자 그리기
-            frame = draw_skeletons(frame, keypoints_list, boxes)
+        if out:
+            out.write(frame)
         
-        # 프레임을 비디오 파일에 기록
-        out.write(frame)
-        
-        # 프레임 표시
         cv2.imshow('Video', frame)
 
-        # 키보드 입력으로 탐지 기능 온오프 토글
         key = cv2.waitKey(1)
-        if key == ord('t'):  # 't' 키를 눌러 탐지 기능 토글
+        if key == ord('t'):
             toggle_detection()
-        elif key == ord('q'):  # 'q' 키를 눌러 종료
+        elif key == ord('q'):
             break
-        
-    # 자원 해제
+
     cap.release()
-    out.release()  # 비디오 저장 객체 해제
+    if out:
+        out.release()
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
