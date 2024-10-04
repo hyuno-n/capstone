@@ -39,6 +39,7 @@ event_detected, frames_after_event, out = False, 0, None
 track_history, object_predictions = defaultdict(list), {}
 
 # 탐지 기능 온오프 설정 및 저장 경로 초기화
+motion_on = False
 detection_on, output_dir = False, "saved_clips"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -122,10 +123,10 @@ def send_alert(event_name):
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
-    if predicted_label in ['Fall', 'Fall_down'] and not event_detected:
+    if predicted_label in ['Fall', 'Fall_down', 'Movement'] and not event_detected:
         event_detected = True
         frames_after_event = 0
-        print(f"{predicted_label} 감지됨!")
+        print(f"{predicted_label} detected!")
         send_alert(predicted_label)
     
     if event_detected:
@@ -138,6 +139,23 @@ def handle_event_detection(frame, predicted_label):
             out.release()
             out = None
             print("이벤트 클립 저장 완료.")
+
+def detect_motion(frame, min_contour_area = 20000):
+    bg_subtractor = cv2.createBackgroundSubtractorMOG2()
+    fg_mask = bg_subtractor.apply(frame)
+    fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
+    fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, None, iterations=2)
+    contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+    motion_detected = False
+    for contour in contours:
+        area = cv2.contourArea(contour)
+        if area > min_contour_area:
+            x, y, w, h = cv2.boundingRect(contour)
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            motion_detected = True
+            
+    return frame, motion_detected
 
 def main():
     """비디오 프로세싱 메인 루프"""
@@ -169,12 +187,18 @@ def main():
                     cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
                 if track_id in object_predictions:
                     cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-
+                    
+        if motion_on:
+            frame, motion_detected = detect_motion(frame)
+            if motion_detected:
+                handle_event_detection(frame, 'Movement')
+            
         if out:
             out.write(frame)
         
         cv2.imshow('Video', frame)
 
+        # 모션 감지 토글 on/off 추후 변경
         key = cv2.waitKey(1)
         if key == ord('t'):
             toggle_detection()
