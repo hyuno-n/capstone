@@ -44,6 +44,10 @@ detection_on, output_dir = False, "saved_clips"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
+# ** ROI 좌표값 (앱에서 받은 값으로 대체 예정) **
+roi_x1, roi_y1, roi_x2, roi_y2 = 0, 0, 1920, 1080  # 초기 값
+roi_apply_signal = False  # ROI 적용 신호 (앱에서 받아옴)
+
 def detect_people_and_keypoints(frame):
     """주어진 프레임에서 사람 및 키포인트 탐지"""
     track_ids, keypoints_list = [], []
@@ -140,7 +144,7 @@ def handle_event_detection(frame, predicted_label):
             out = None
             print("이벤트 클립 저장 완료.")
 
-def detect_motion(frame, min_contour_area = 20000):
+def detect_movement(frame, min_contour_area = 20000):
     bg_subtractor = cv2.createBackgroundSubtractorMOG2()
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
@@ -152,10 +156,19 @@ def detect_motion(frame, min_contour_area = 20000):
         area = cv2.contourArea(contour)
         if area > min_contour_area:
             x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            motion_detected = True
+            if (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2):
+                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                motion_detected = True
             
     return frame, motion_detected
+
+def draw_detection_area(frame):
+    """탐지할 영역(ROI)을 프레임에 그리는 함수"""
+    cv2.rectangle(frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (0, 0, 255), 2)  # 빨간색 사각형 그리기
+
+def is_in_detection_area(x, y):
+    """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
+    return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
 
 def main():
     """비디오 프로세싱 메인 루프"""
@@ -166,11 +179,16 @@ def main():
             break
 
         frame = cv2.resize(frame, (output_width, output_height))
+        
+        if roi_apply_signal:
+            # 탐지할 영역 그리기
+            draw_detection_area(frame)
 
         if detection_on:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
             predicted_label = default_class
-
+            detected_in_roi = False 
+            
             for keypoints, track_id in zip(keypoints_list, track_ids):
                 preprocessed_keypoints = preprocess_keypoints(keypoints)
                 preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
@@ -178,18 +196,24 @@ def main():
                 predicted_class = np.argmax(predictions, axis=1)[0]
                 predicted_label = classes[predicted_class]
                 object_predictions[track_id] = predicted_label
-
-            handle_event_detection(frame, predicted_label)
-            frame = draw_skeletons_and_boxes(frame, keypoints_list, boxes)
-            for track_id, track in track_history.items():
-                if track:
-                    points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                    cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-                if track_id in object_predictions:
-                    cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                
+                for (x, y) in keypoints:
+                    if is_in_detection_area(x, y):  # ROI 내에 있는지 확인
+                        detected_in_roi = True  # ROI 내에서 감지됨
+                        break  # 한 번이라도 ROI 안에 있는 점이 있으면 감지 성공으로 처리
                     
+            if detected_in_roi:
+                handle_event_detection(frame, predicted_label)
+                frame = draw_skeletons_and_boxes(frame, keypoints_list, boxes)
+                for track_id, track in track_history.items():
+                    if track:
+                        points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+                        cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
+                    if track_id in object_predictions:
+                        cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                        
         if motion_on:
-            frame, motion_detected = detect_motion(frame)
+            frame, motion_detected = detect_movement(frame)
             if motion_detected:
                 handle_event_detection(frame, 'Movement')
             
