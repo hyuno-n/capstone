@@ -3,7 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:home_protect/controller/app_controller.dart';
 import 'package:home_protect/pages/ai_report_page.dart';
-import 'package:home_protect/pages/detection_range.dart';
+import 'package:home_protect/pages/log_page.dart';
 import 'package:home_protect/pages/monitoring.dart';
 import 'package:home_protect/pages/user_page.dart';
 
@@ -22,7 +22,7 @@ class App extends GetView<AppController> {
             return const AiReportPage();
           //break;
           case RouteName.Detection_range:
-            return const Detection_range();
+            return const LogPage();
           //break;
           case RouteName.User_page:
             return const User_page();
@@ -51,7 +51,7 @@ class App extends GetView<AppController> {
             BottomNavigationBarItem(
               icon: SvgPicture.asset("assets/svg/icons/alarm_off.svg"),
               activeIcon: SvgPicture.asset("assets/svg/icons/alarm_on.svg"),
-              label: "감지 범위",
+              label: "로그 확인",
             ),
             BottomNavigationBarItem(
               icon: SvgPicture.asset("assets/svg/icons/user_off.svg"),
