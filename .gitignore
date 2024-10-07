@@ -44,4 +44,4 @@ app.*.map.json
 
 .env
 
-/test/
+test/
