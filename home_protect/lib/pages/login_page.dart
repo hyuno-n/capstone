@@ -1,109 +1,148 @@
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart'; // Get 패키지 임포트
+import 'package:get/get.dart';
 import 'package:home_protect/pages/sign_up_page.dart';
-import 'package:home_protect/src/app.dart'; // App 페이지 임포트
-import 'package:home_protect/controller/user_controller.dart'; // UserController 임포트
+import 'package:home_protect/src/app.dart';
+import 'package:home_protect/controller/user_controller.dart';
+import 'package:home_protect/controller/log_controller.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class Login_Page extends StatelessWidget {
   const Login_Page({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      // CupertinoApp 대신 MaterialApp 사용
-      home: Login(),
-      debugShowCheckedModeBanner: false,
+    return Scaffold(
+      appBar: AppBar(title: const Text('Login')),
+      body: const Login(),
     );
   }
 }
 
-class Login extends StatelessWidget {
+class Login extends StatefulWidget {
   const Login({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final UserController userController = Get.find();
+  _LoginState createState() => _LoginState();
+}
 
-    return CupertinoPageScaffold(
-      navigationBar: const CupertinoNavigationBar(
-        middle: Text("Login"),
-      ),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            const SizedBox(height: 170),
-            SizedBox(
-              width: 280,
-              child: CupertinoTextField(
-                placeholder: 'Username',
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0, vertical: 12.0),
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: CupertinoColors.lightBackgroundGray,
-                    width: 1.0,
-                  ),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-                onChanged: (value) {
-                  userController.setUsername(value);
-                },
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              width: 280,
-              child: CupertinoTextField(
-                placeholder: 'Password',
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 12.0, vertical: 12.0),
-                obscureText: true,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: CupertinoColors.lightBackgroundGray,
-                    width: 1.0,
-                  ),
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-            ),
-            const SizedBox(height: 115),
-            SizedBox(
-              width: 280,
-              child: Column(
-                children: [
-                  CupertinoButton.filled(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const App()),
-                      );
-                    },
-                    child: const Text(
-                      'Login',
-                      style: TextStyle(fontSize: 20),
+class _LoginState extends State<Login> {
+  final UserController userController = Get.find();
+  final LogController logController = Get.find();
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  Future<void> _login(BuildContext context) async {
+    final String? flaskIp = dotenv.env['FLASK_IP'];
+    final String? flaskPort = dotenv.env['FLASK_PORT'];
+    final String url = 'http://$flaskIp:$flaskPort/login';
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'id': _usernameController.text,
+          'password': _passwordController.text,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        userController.setUsername(_usernameController.text);
+        userController.setLoggedIn(true);
+        logController.setCurrentUserId(_usernameController.text);
+        logController.connectToSocket(() {
+          setState(() {});
+        });
+        logController.fetchLogs(
+            _usernameController.text); // Fetch logs after setting user ID
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const App()),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to login: ${response.body}')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const SizedBox(height: 170),
+              SizedBox(
+                width: 280,
+                child: TextField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    hintText: 'Username',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
-                  const SizedBox(height: 7),
-                  CupertinoButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const Sign_up_Page()),
-                      );
-                    },
-                    child: const Text(
-                      'Sign up',
-                      style: TextStyle(fontSize: 15),
+                  onChanged: (value) {
+                    userController.setUsername(value);
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: 280,
+                child: TextField(
+                  controller: _passwordController,
+                  decoration: InputDecoration(
+                    hintText: 'Password',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
                     ),
                   ),
-                ],
+                  obscureText: true,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 115),
+              SizedBox(
+                width: 280,
+                child: Column(
+                  children: [
+                    ElevatedButton(
+                      onPressed: () => _login(context),
+                      child: const Text(
+                        'Login',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ),
+                    const SizedBox(height: 7),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => const SignUpPage()),
+                        );
+                      },
+                      child: const Text(
+                        'Sign up',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
