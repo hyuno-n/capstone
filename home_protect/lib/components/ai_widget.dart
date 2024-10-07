@@ -72,7 +72,7 @@ class AiWidget extends StatelessWidget {
                 style: DefaultTextStyle.of(context).style,
                 children: [
                   TextSpan(text: '$datePart\n'),
-                  TextSpan(text: '$timePart'),
+                  TextSpan(text: timePart),
                 ],
               ),
             ),
@@ -85,7 +85,7 @@ class AiWidget extends StatelessWidget {
             onPressed: () => _playVideo(context),
           ),
           IconButton(
-            icon: Icon(Icons.download),
+            icon: const Icon(Icons.download),
             onPressed: () async {
               await _downloadVideo(context, videoUrl);
             },
