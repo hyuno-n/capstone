@@ -7,7 +7,7 @@ from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import matplotlib.pyplot as plt
 
 # 클래스 레이블 설정
-classes = ['넘어짐', '떨어짐', '정상']
+classes = ['넘어짐', '정상']
 
 # 넘파이 파일 로드
 data = np.load('keypoints_data.npz')
