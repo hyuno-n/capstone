@@ -40,15 +40,19 @@ class LogController {
     });
 
     socket.on('push_message', (data) {
-      String? id = data['id'].toString();
+      print('Received push_message event: $data'); // Debugging log
+
+      String? user_id = data['user_id']?.toString();
       String? timestamp = data['timestamp'];
       String? eventname = data['eventname'];
-      String? cameraNumber = data['camera_number'].toString();
+      String? cameraNumber = data['camera_number']?.toString();
+
+      print('Parsed user_id: $user_id'); // Debugging log
 
       _showPushMessage(eventname);
 
       logs.add({
-        'id': id ?? 'No id',
+        'user_id': user_id ?? 'No user id',
         'timestamp': _formatTimestamp(timestamp),
         'eventname': eventname ?? 'No event name',
         'camera_number': cameraNumber ?? 'No camera number',

@@ -25,7 +25,7 @@ def push_message(user_id, eventname, camera_number=1):
         print('Failed to log event:', response.text)
 
 if __name__ == '__main__':
-    user_id = input("Enter the User ID: ")
+    user_id = input("Enter the User ID: ")  # User ID를 문자열로 받습니다.
     eventname = input("Enter the event name: ")
     camera_number = input("Enter the camera number: ")
     push_message(user_id, eventname, int(camera_number))

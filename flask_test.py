@@ -1,4 +1,4 @@
-from app import create_app, db, socketio  # socketio 추가
+from app import create_app, db, socketio
 from flask_migrate import Migrate
 from flask_script import Manager
 

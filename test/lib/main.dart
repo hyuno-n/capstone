@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'pages/home_page.dart';
+import 'pages/register_page.dart';
 
 void main() async {
   await dotenv.load(fileName: ".env");
@@ -12,7 +13,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Push Notification',
-      home: MyHomePage(),
+      initialRoute: '/register',
+      routes: {
+        '/': (context) => MyHomePage(),
+        '/register': (context) => RegisterPage(),
+        '/logs': (context) => MyHomePage(),
+      },
     );
   }
 }
