@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import os
 import datetime
+import requests
 from tensorflow.keras.models import load_model
 from collections import defaultdict, deque
 
@@ -20,6 +21,7 @@ classes = ['Fall', 'Fall_down', 'Normal']
 
 # RTSP 스트림 주소 설정
 rtsp_url = "rtsp://username:password@camera_ip_address/stream"
+server_url = "http://server_ip_address:5000/set_detection"
 cap = cv2.VideoCapture(rtsp_url)
 
 # 기본값으로 설정할 키포인트와 클래스
@@ -39,14 +41,9 @@ event_detected, frames_after_event, out = False, 0, None
 track_history, object_predictions = defaultdict(list), {}
 
 # 탐지 기능 온오프 설정 및 저장 경로 초기화
-motion_on = False
-detection_on, output_dir = False, "saved_clips"
+output_dir = "saved_clips"  
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
-
-# ** ROI 좌표값 (앱에서 받은 값으로 대체 예정) **
-roi_x1, roi_y1, roi_x2, roi_y2 = 0, 0, 1920, 1080  # 초기 값
-roi_apply_signal = False  # ROI 적용 신호 (앱에서 받아옴)
 
 def detect_people_and_keypoints(frame):
     """주어진 프레임에서 사람 및 키포인트 탐지"""
@@ -123,6 +120,24 @@ def save_event_clip(event_name, frame):
 def send_alert(event_name):
     """이벤트 발생 시 알림을 보내는 함수"""
     print(f"경고: {event_name} 발생! 알림 전송 중...")
+    
+    # 서버에 알림 전송
+    url = server_url
+    timestamp = datetime.datetime.now().isoformat()
+    
+    payload = {
+        'event_type': event_name,
+        'timestamp': timestamp
+    }
+    
+    try:
+        response = requests.post(url, json=payload)
+        if response.status_code == 200:
+            print("서버에 신호 전송 완료.")
+        else:
+            print("서버 신호 전송 실패:", response.status_code)
+    except Exception as e:
+        print("오류 발생:", e)
 
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
@@ -162,13 +177,44 @@ def detect_movement(frame, min_contour_area = 20000):
             
     return frame, motion_detected
 
-def draw_detection_area(frame):
+def draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2):
     """탐지할 영역(ROI)을 프레임에 그리는 함수"""
     cv2.rectangle(frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (0, 0, 255), 2)  # 빨간색 사각형 그리기
 
 def is_in_detection_area(x, y):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
+
+def get_roi_and_signal_from_server():
+    # 서버로부터 ROI 좌표와 신호를 받아오는 요청 (임시 URL)
+    response = requests.get(server_url)
+    data = response.json()
+
+    # ROI 좌표값 (서버에서 받아옴)
+    roi_x1 = data['roi_x1']
+    roi_y1 = data['roi_y1']
+    roi_x2 = data['roi_x2']
+    roi_y2 = data['roi_y2']
+
+    # ROI 적용 신호 (서버에서 받아옴)
+    roi_apply_signal = data['roi_apply_signal']
+
+    return roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal
+
+
+def get_detection_status():
+    """서버에서 탐지 기능 상태 가져오기"""
+    try:
+        response = requests.get(server_url)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            print("서버에서 상태를 가져오는 데 실패했습니다.")
+            return None
+    except Exception as e:
+        print(f"서버 통신 중 오류 발생: {e}")
+        return None
+
 
 def main():
     """비디오 프로세싱 메인 루프"""
@@ -177,14 +223,23 @@ def main():
         success, frame = cap.read()
         if not success:
             break
+        
+        # 서버에서 탐지 기능 상태 가져오기
+        detection_status = get_detection_status()
+        if detection_status:
+            fainting_detection_on = detection_status.get('fainting_detection_on', False)
+            movement_detection_on = detection_status.get('movement_detection_on', False)
+
+        roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal = get_roi_and_signal_from_server()
 
         frame = cv2.resize(frame, (output_width, output_height))
         
         if roi_apply_signal:
             # 탐지할 영역 그리기
-            draw_detection_area(frame)
+            draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
 
-        if detection_on:
+        # 이상행동 모델
+        if fainting_detection_on:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
             predicted_label = default_class
             detected_in_roi = False 
@@ -211,8 +266,8 @@ def main():
                         cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
                     if track_id in object_predictions:
                         cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-                        
-        if motion_on:
+        # 움직임 감지(영상처리)                
+        if movement_detection_on:
             frame, motion_detected = detect_movement(frame)
             if motion_detected:
                 handle_event_detection(frame, 'Movement')
