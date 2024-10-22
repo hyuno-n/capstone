@@ -95,7 +95,10 @@ flutter:
     - assets/images/fire_detection.gif
     - assets/images/fall_detection_on.gif
     - assets/images/fire_detection_on.gif
+    - assets/images/range_detection_set_on.gif
     - assets/images/range_detection_set.gif
+    - assets/images/notice_icon.gif
+    - assets/images/setting_icon.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -51,6 +51,67 @@ class _AiReportState extends State<AiReport>
     prefs.setBool(key, value);
   }
 
+  // 넘어짐 감지 스위치 변경
+  void _onFallDetectionChanged(bool value) {
+    if (value) {
+      _showConfirmationDialog(value, true); // 스위치가 켜질 때 다이얼로그 호출
+    } else {
+      setState(() {
+        isFallDetectionOn = value;
+        _saveSwitchState('fallDetection', value); // 상태 저장
+      });
+    }
+  }
+
+  // 화재 감지 스위치 변경
+  void _onFireDetectionChanged(bool value) {
+    if (value) {
+      _showConfirmationDialog(value, false); // 스위치가 켜질 때 다이얼로그 호출
+    } else {
+      setState(() {
+        isFireDetectionOn = value;
+        _saveSwitchState('fireDetection', value); // 상태 저장
+      });
+    }
+  }
+
+  // 넘어짐 감지 활성화 확인 다이얼로그
+  void _showConfirmationDialog(bool value, bool isFallDetection) {
+    showCupertinoDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return CupertinoAlertDialog(
+          title: const Text("알림"),
+          content: Text(
+              isFallDetection ? "넘어짐 감지를 활성화하시겠습니까?" : "화재 감지를 활성화하시겠습니까?"),
+          actions: <Widget>[
+            CupertinoDialogAction(
+              child: const Text("취소"),
+              onPressed: () {
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+              },
+            ),
+            CupertinoDialogAction(
+              child: const Text("확인"),
+              onPressed: () {
+                setState(() {
+                  if (isFallDetection) {
+                    isFallDetectionOn = true; // 상태 업데이트
+                    _saveSwitchState('fallDetection', true); // 상태 저장
+                  } else {
+                    isFireDetectionOn = true; // 상태 업데이트
+                    _saveSwitchState('fireDetection', true); // 상태 저장
+                  }
+                });
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // 감지 범위 스위치 변경
   void _onDetectionRangeChanged(bool value) {
     setState(() {
@@ -136,12 +197,7 @@ class _AiReportState extends State<AiReport>
                 ),
                 CupertinoSwitch(
                   value: isFallDetectionOn,
-                  onChanged: (value) {
-                    setState(() {
-                      isFallDetectionOn = value;
-                    });
-                    _saveSwitchState('fallDetection', value); // 상태 저장
-                  },
+                  onChanged: _onFallDetectionChanged, // 스위치 변경 시 다이얼로그 호출
                 ),
               ],
             ),
@@ -168,12 +224,7 @@ class _AiReportState extends State<AiReport>
                 ),
                 CupertinoSwitch(
                   value: isFireDetectionOn,
-                  onChanged: (value) {
-                    setState(() {
-                      isFireDetectionOn = value;
-                    });
-                    _saveSwitchState('fireDetection', value); // 상태 저장
-                  },
+                  onChanged: _onFireDetectionChanged, // 스위치 변경 시 다이얼로그 호출
                 ),
               ],
             ),
@@ -193,7 +244,9 @@ class _AiReportState extends State<AiReport>
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/range_detection_set.gif', // 아이콘 경로
+                      isDetectionRangeOn
+                          ? 'assets/images/range_detection_set_on.gif' // 스위치가 켜졌을 때 아이콘
+                          : 'assets/images/range_detection_set.gif', // 스위치가 꺼졌을 때 아이콘
                       width: 50, // 아이콘 너비
                       height: 50, // 아이콘 높이
                     ),
