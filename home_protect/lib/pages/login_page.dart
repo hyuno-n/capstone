@@ -14,7 +14,7 @@ class Login_Page extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Login')),
+      appBar: AppBar(),
       body: const Login(),
     );
   }
@@ -135,6 +135,20 @@ class _LoginState extends State<Login> {
                       },
                       child: const Text(
                         'Sign up',
+                        style: TextStyle(fontSize: 15),
+                      ),
+                    ),
+                    // 새로운 버튼 추가
+                    const SizedBox(height: 7),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (context) => const App()),
+                        );
+                      },
+                      child: const Text(
+                        'Go to Home',
                         style: TextStyle(fontSize: 15),
                       ),
                     ),
