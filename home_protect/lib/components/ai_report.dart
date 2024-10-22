@@ -89,13 +89,23 @@ class _AiReportState extends State<AiReport> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 기존의 넘어짐 감지와 화재 감지 스위치
+            // 넘어짐 감지 텍스트 및 아이콘
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "넘어짐 감지",
-                  style: TextStyle(fontSize: 18),
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/fall_detection.gif', // 애니메이션 아이콘
+                      width: 50, // 아이콘 너비
+                      height: 50, // 아이콘 높이
+                    ),
+                    const SizedBox(width: 8), // 텍스트와 아이콘 사이 간격
+                    const Text(
+                      "넘어짐 감지",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
                 ),
                 CupertinoSwitch(
                   value: isFallDetectionOn,
@@ -109,12 +119,23 @@ class _AiReportState extends State<AiReport> {
               ],
             ),
             const SizedBox(height: 20),
+            // 화재 감지 텍스트 및 아이콘
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  "화재 감지",
-                  style: TextStyle(fontSize: 18),
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/fire_detection.gif', // 애니메이션 아이콘
+                      width: 50, // 아이콘 너비
+                      height: 50, // 아이콘 높이
+                    ),
+                    const SizedBox(width: 8), // 텍스트와 아이콘 사이 간격
+                    const Text(
+                      "화재 감지",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
                 ),
                 CupertinoSwitch(
                   value: isFireDetectionOn,
@@ -131,38 +152,61 @@ class _AiReportState extends State<AiReport> {
 
             // 경계선 추가
             Container(
-              height: 1,
-              color: Colors.black,
+              height: 0.3,
+              color: Colors.grey,
             ),
             const SizedBox(height: 20),
 
-            // ROI 선택기능을 위한 GestureDetector 추가
+            // 크기 박스 추가
+            const SizedBox(
+              height: 110, // 원하는 높이로 설정
+              child: Center(),
+            ),
+            const SizedBox(height: 20),
+
             Expanded(
-              child: Center(
-                child: GestureDetector(
-                  onPanStart: _onPanStart,
-                  onPanUpdate: _onPanUpdate,
-                  onPanEnd: _onPanEnd,
-                  child: Stack(
-                    children: [
-                      // 4:3 비율의 드래그 영역을 나타낼 검정 박스
-                      Container(
-                        width: boxWidth,
-                        height: boxHeight,
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.black, width: 2),
+              child: Column(
+                children: [
+                  const Text(
+                    "감지 범위 설정",
+                    style: TextStyle(fontSize: 17),
+                    textAlign: TextAlign.center,
+                  ),
+                  // ROI 선택기능을 위한 GestureDetector 추가
+                  Center(
+                    child: SizedBox(
+                      width: 352.7, // 너비 설정
+                      height: 260.0, // 높이 설정
+                      child: GestureDetector(
+                        onPanStart: _onPanStart,
+                        onPanUpdate: _onPanUpdate,
+                        onPanEnd: _onPanEnd,
+                        child: Stack(
+                          children: [
+                            // 4:3 비율의 드래그 영역을 나타낼 검정 박스
+                            Container(
+                              width: boxWidth,
+                              height: boxHeight,
+                              decoration: BoxDecoration(
+                                border:
+                                    Border.all(color: Colors.black, width: 2),
+                              ),
+                            ),
+                            // 드래그로 선택한 ROI 네모 박스 그리기
+                            if (startPosition != null &&
+                                currentPosition != null)
+                              CustomPaint(
+                                painter: RoiPainter(
+                                    startPosition!, currentPosition!),
+                              ),
+                          ],
                         ),
                       ),
-                      // 드래그로 선택한 ROI 네모 박스 그리기
-                      if (startPosition != null && currentPosition != null)
-                        CustomPaint(
-                          painter: RoiPainter(startPosition!, currentPosition!),
-                        ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ),
+            )
           ],
         ),
       ),

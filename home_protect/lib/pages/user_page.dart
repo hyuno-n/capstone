@@ -210,7 +210,7 @@ class User_page extends StatelessWidget {
                     // 설정 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
                   title: const Text('프로필 변경'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -218,7 +218,7 @@ class User_page extends StatelessWidget {
                     // 프로필 변경 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
                   title: const Text('공지사항'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -226,7 +226,7 @@ class User_page extends StatelessWidget {
                     // 공지사항 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
                   title: const Text('고객센터'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -234,7 +234,7 @@ class User_page extends StatelessWidget {
                     // 고객센터 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
                   title: const Text('1:1 문의 내역'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -242,7 +242,7 @@ class User_page extends StatelessWidget {
                     // 1:1 문의 내역 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
                   title: const Text('카메라 정보'),
                   trailing: const Icon(Icons.arrow_forward_ios),
@@ -250,7 +250,7 @@ class User_page extends StatelessWidget {
                     // 카메라 정보 클릭 시 동작
                   },
                 ),
-                const Divider(),
+                const SizedBox(height: 10), // 버튼 간격 추가
               ],
             ),
           ),
