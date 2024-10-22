@@ -9,19 +9,26 @@ class AiReport extends StatefulWidget {
   _AiReportState createState() => _AiReportState();
 }
 
-class _AiReportState extends State<AiReport> {
+class _AiReportState extends State<AiReport>
+    with SingleTickerProviderStateMixin {
   bool isFallDetectionOn = false;
   bool isFireDetectionOn = false;
+  bool isDetectionRangeOn = false; // 감지 범위 스위치 추가
   Offset? startPosition; // 드래그 시작 위치
   Offset? currentPosition; // 드래그 현재 위치
   Rect? roiRect; // 최종 ROI 네모 박스 좌표
   double boxWidth = 400; // 4:3 비율의 네모 박스 너비
   double boxHeight = 250; // 수직 길이 줄임
+  late AnimationController _controller; // 애니메이션 컨트롤러
 
   @override
   void initState() {
     super.initState();
     _loadSwitchStates(); // 저장된 스위치 상태를 로드
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 300), // 애니메이션 시간
+      vsync: this,
+    );
   }
 
   // 스위치 상태를 SharedPreferences에서 불러오는 함수
@@ -30,6 +37,11 @@ class _AiReportState extends State<AiReport> {
     setState(() {
       isFallDetectionOn = prefs.getBool('fallDetection') ?? false;
       isFireDetectionOn = prefs.getBool('fireDetection') ?? false;
+      isDetectionRangeOn =
+          prefs.getBool('detectionRange') ?? false; // 감지 범위 스위치 상태 로드
+      if (isDetectionRangeOn) {
+        _controller.forward(); // 감지 범위가 켜져 있으면 애니메이션 진행
+      }
     });
   }
 
@@ -37,6 +49,19 @@ class _AiReportState extends State<AiReport> {
   Future<void> _saveSwitchState(String key, bool value) async {
     final prefs = await SharedPreferences.getInstance();
     prefs.setBool(key, value);
+  }
+
+  // 감지 범위 스위치 변경
+  void _onDetectionRangeChanged(bool value) {
+    setState(() {
+      isDetectionRangeOn = value;
+      if (isDetectionRangeOn) {
+        _controller.forward(); // 스위치가 켜질 때 애니메이션 실행
+      } else {
+        _controller.reverse(); // 스위치가 꺼질 때 애니메이션 실행
+      }
+      _saveSwitchState('detectionRange', value); // 상태 저장
+    });
   }
 
   // 드래그 시작 시
@@ -96,7 +121,9 @@ class _AiReportState extends State<AiReport> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/fall_detection.gif', // 애니메이션 아이콘
+                      isFallDetectionOn
+                          ? 'assets/images/fall_detection_on.gif' // 감지 상태에 따른 이미지
+                          : 'assets/images/fall_detection.gif',
                       width: 50, // 아이콘 너비
                       height: 50, // 아이콘 높이
                     ),
@@ -126,7 +153,9 @@ class _AiReportState extends State<AiReport> {
                 Row(
                   children: [
                     Image.asset(
-                      'assets/images/fire_detection.gif', // 애니메이션 아이콘
+                      isFireDetectionOn
+                          ? 'assets/images/fire_detection_on.gif' // 감지 상태에 따른 이미지
+                          : 'assets/images/fire_detection.gif',
                       width: 50, // 아이콘 너비
                       height: 50, // 아이콘 높이
                     ),
@@ -157,84 +186,144 @@ class _AiReportState extends State<AiReport> {
             ),
             const SizedBox(height: 20),
 
-            // 크기 박스 추가
-            const SizedBox(
-              height: 110, // 원하는 높이로 설정
-              child: Center(),
+            // 감지 범위 스위치
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/range_detection_set.gif', // 아이콘 경로
+                      width: 50, // 아이콘 너비
+                      height: 50, // 아이콘 높이
+                    ),
+                    const SizedBox(width: 8), // 아이콘과 텍스트 사이의 간격
+                    const Text(
+                      "감지 범위 설정",
+                      style: TextStyle(fontSize: 18),
+                    ),
+                  ],
+                ),
+                CupertinoSwitch(
+                  value: isDetectionRangeOn,
+                  onChanged: _onDetectionRangeChanged,
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
 
-            Expanded(
-              child: Column(
-                children: [
-                  const Text(
-                    "감지 범위 설정",
-                    style: TextStyle(fontSize: 17),
-                    textAlign: TextAlign.center,
-                  ),
-                  // ROI 선택기능을 위한 GestureDetector 추가
-                  Center(
-                    child: SizedBox(
-                      width: 352.7, // 너비 설정
-                      height: 260.0, // 높이 설정
-                      child: GestureDetector(
-                        onPanStart: _onPanStart,
-                        onPanUpdate: _onPanUpdate,
-                        onPanEnd: _onPanEnd,
-                        child: Stack(
-                          children: [
-                            // 4:3 비율의 드래그 영역을 나타낼 검정 박스
-                            Container(
-                              width: boxWidth,
-                              height: boxHeight,
-                              decoration: BoxDecoration(
-                                border:
-                                    Border.all(color: Colors.black, width: 2),
+            // ROI 설정 박스 애니메이션
+            SizeTransition(
+              sizeFactor: _controller,
+              child: ClipRect(
+                child: Material(
+                  elevation: 4, // 그림자의 깊이 설정
+                  shadowColor: Colors.black.withOpacity(0.2), // 그림자 색상 설정
+                  borderRadius: BorderRadius.circular(8), // 모서리 둥글게
+                  child: Container(
+                    height: 335, // 원하는 높이로 설정
+                    decoration: BoxDecoration(
+                      color: Colors.white, // 배경색을 하얀색으로 설정
+                      border:
+                          Border.all(color: Colors.grey, width: 1), // 회색 얇은 경계선
+                    ),
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 20), // 위쪽 여백
+                        const Text(
+                          "ROI 설정",
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 10), // 텍스트와 박스 사이 여백
+                        GestureDetector(
+                          onPanStart: _onPanStart,
+                          onPanUpdate: _onPanUpdate,
+                          onPanEnd: _onPanEnd,
+                          child: Container(
+                            width: boxWidth,
+                            height: boxHeight + 2, // ROI 박스 높이는 기존 유지
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: Colors.black,
+                                  width: 2), // ROI 박스 경계선 설정
+                            ),
+                            child: CustomPaint(
+                              painter: RoiPainter(
+                                startPosition,
+                                currentPosition,
+                                boxWidth,
+                                boxHeight,
                               ),
                             ),
-                            // 드래그로 선택한 ROI 네모 박스 그리기
-                            if (startPosition != null &&
-                                currentPosition != null)
-                              CustomPaint(
-                                painter: RoiPainter(
-                                    startPosition!, currentPosition!),
-                              ),
-                          ],
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
-            )
+            ),
+
+            const SizedBox(height: 20),
+
+            // 추가적인 공간을 위해
+            const Expanded(child: SizedBox()),
           ],
         ),
       ),
     );
   }
+
+  @override
+  void dispose() {
+    _controller.dispose(); // 애니메이션 컨트롤러 해제
+    super.dispose();
+  }
 }
 
 // ROI 영역을 그리기 위한 CustomPainter 클래스
 class RoiPainter extends CustomPainter {
-  final Offset startPosition;
-  final Offset currentPosition;
+  final Offset? startPosition;
+  final Offset? currentPosition;
+  final double boxWidth;
+  final double boxHeight;
 
-  RoiPainter(this.startPosition, this.currentPosition);
+  RoiPainter(
+      this.startPosition, this.currentPosition, this.boxWidth, this.boxHeight);
 
   @override
   void paint(Canvas canvas, Size size) {
+    // 드래그로 그린 네모 박스 그리기
     final paint = Paint()
       ..color = Colors.red.withOpacity(0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2;
 
-    // 드래그로 그린 네모 박스 그리기
-    Rect rect = Rect.fromPoints(startPosition, currentPosition);
-    canvas.drawRect(rect, paint);
+    // 드래그로 그린 네모 박스가 있을 경우 그리기
+    if (startPosition != null && currentPosition != null) {
+      Rect rect = Rect.fromPoints(startPosition!, currentPosition!);
+      canvas.drawRect(rect, paint);
+    }
+
+    // 회색 십자가 선 그리기
+    final crossPaint = Paint()
+      ..color = Colors.grey // 회색으로 설정
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+
+    // 검정 박스의 중앙에 십자가 그리기
+    double centerX = boxWidth / 2;
+    double centerY = boxHeight / 2;
+
+    // 수직선: 왼쪽으로 이동
+    canvas.drawLine(
+        Offset(centerX - 25, 0), Offset(centerX - 25, boxHeight), crossPaint);
+    // 수평선
+    canvas.drawLine(Offset(0, centerY), Offset(boxWidth, centerY), crossPaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
+    return true; // 항상 리페인트 필요
   }
 }
