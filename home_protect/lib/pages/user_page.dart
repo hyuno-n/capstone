@@ -84,18 +84,16 @@ class User_page extends StatelessWidget {
           const SizedBox(height: 25),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 70,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDDDDDD),
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(5),
-                        bottomLeft: Radius.circular(5),
-                      ),
-                    ),
+            child: Container(
+              height: 70,
+              decoration: const BoxDecoration(
+                color: Color(0xFFDDDDDD),
+                borderRadius:
+                    BorderRadius.all(Radius.circular(5)), // 모든 모서리를 둥글게
+              ),
+              child: Row(
+                children: [
+                  Expanded(
                     child: Center(
                       child: RichText(
                         textAlign: TextAlign.center,
@@ -122,12 +120,8 @@ class User_page extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Container(
-                    height: 70,
-                    color: const Color(0xFFDDDDDD),
+                  const VerticalDivider(width: 1, color: Colors.grey), // 구분선 추가
+                  Expanded(
                     child: Center(
                       child: RichText(
                         textAlign: TextAlign.center,
@@ -154,18 +148,8 @@ class User_page extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Container(
-                    height: 70,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDDDDDD),
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(5),
-                        bottomRight: Radius.circular(5),
-                      ),
-                    ),
+                  const VerticalDivider(width: 1, color: Colors.grey), // 구분선 추가
+                  Expanded(
                     child: Center(
                       child: RichText(
                         textAlign: TextAlign.center,
@@ -192,18 +176,25 @@ class User_page extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: 10),
-          const Divider(thickness: 1, color: Colors.grey),
+          const Divider(
+            thickness: 1,
+            color: Color.fromARGB(255, 218, 214, 214),
+            indent: 20, // 왼쪽 여백
+            endIndent: 20, // 오른쪽 여백
+          ),
           const SizedBox(height: 10),
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               children: [
                 ListTile(
+                  leading: Image.asset('assets/images/setting_icon.gif',
+                      width: 30, height: 30), // GIF 아이콘 추가
                   title: const Text('설정'),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
@@ -212,42 +203,12 @@ class User_page extends StatelessWidget {
                 ),
                 const SizedBox(height: 10), // 버튼 간격 추가
                 ListTile(
-                  title: const Text('프로필 변경'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // 프로필 변경 클릭 시 동작
-                  },
-                ),
-                const SizedBox(height: 10), // 버튼 간격 추가
-                ListTile(
+                  leading: Image.asset('assets/images/notice_icon.gif',
+                      width: 30, height: 30), // GIF 아이콘 추가
                   title: const Text('공지사항'),
                   trailing: const Icon(Icons.arrow_forward_ios),
                   onTap: () {
                     // 공지사항 클릭 시 동작
-                  },
-                ),
-                const SizedBox(height: 10), // 버튼 간격 추가
-                ListTile(
-                  title: const Text('고객센터'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // 고객센터 클릭 시 동작
-                  },
-                ),
-                const SizedBox(height: 10), // 버튼 간격 추가
-                ListTile(
-                  title: const Text('1:1 문의 내역'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // 1:1 문의 내역 클릭 시 동작
-                  },
-                ),
-                const SizedBox(height: 10), // 버튼 간격 추가
-                ListTile(
-                  title: const Text('카메라 정보'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {
-                    // 카메라 정보 클릭 시 동작
                   },
                 ),
                 const SizedBox(height: 10), // 버튼 간격 추가
