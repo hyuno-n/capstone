@@ -22,6 +22,7 @@ class MyApp extends StatelessWidget {
         primaryColor: Colors.white,
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
+        fontFamily: 'Pretendard', // 기본 폰트를 Pretendard로 설정
       ),
       initialBinding: InitBinding(),
       initialRoute: "/splash",
