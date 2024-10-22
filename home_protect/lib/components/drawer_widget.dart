@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:home_protect/controller/user_controller.dart'; // UserController 임포트
+import 'package:home_protect/controller/app_controller.dart'; // AppController 임포트
+// import 'package:home_protect/pages/user_page.dart'; // User_page 임포트
 
 class DrawerWidget extends StatelessWidget {
   const DrawerWidget({super.key});
@@ -8,12 +10,14 @@ class DrawerWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final UserController userController = Get.find();
+    final AppController appController = Get.find(); // AppController 찾기
 
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          Obx(() => UserAccountsDrawerHeader(
+          Obx(
+            () => UserAccountsDrawerHeader(
                 currentAccountPicture: const CircleAvatar(
                   backgroundImage: AssetImage('images/user_profile.png'),
                   backgroundColor: Colors.white,
@@ -34,16 +38,19 @@ class DrawerWidget extends StatelessWidget {
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(40.0),
                       bottomRight: Radius.circular(40.0),
-                    )),
-              )),
+                    ))),
+          ),
           ListTile(
             leading: Icon(
               Icons.home,
               color: Colors.grey[850],
             ),
-            title: const Text('Home'),
+            title: const Text('My page'),
             onTap: () {
-              print('Home is clicked !');
+              // Home 버튼 클릭 시 User_page로 이동
+              appController.changePageIndex(
+                  RouteName.User_page.index); // User_page 인덱스로 변경
+              Get.back(); // Drawer 닫기
             },
             trailing: const Icon(Icons.add),
           ),

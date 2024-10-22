@@ -17,51 +17,64 @@ class App extends GetView<AppController> {
         switch (RouteName.values[controller.currentIndex.value]) {
           case RouteName.Monitoring:
             return const Monitoring();
-          //break;
           case RouteName.AI_report:
             return const AiReportPage();
-          //break;
           case RouteName.Detection_range:
             return const LogPage();
-          //break;
           case RouteName.User_page:
             return const User_page();
-          //break;
         }
-        //return Container();
+        return Container(); // 기본적으로 빈 컨테이너를 반환
       }),
       bottomNavigationBar: Obx(
-        () => BottomNavigationBar(
-          type: BottomNavigationBarType.fixed,
-          currentIndex: controller.currentIndex.value,
-          selectedItemColor: const Color.fromARGB(255, 196, 28, 202),
-          showSelectedLabels: true,
-          onTap: controller.changePageIndex,
-          items: [
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset("assets/svg/icons/video_off.svg"),
-              activeIcon: SvgPicture.asset("assets/svg/icons/video_on.svg"),
-              label: "모니터링",
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset("assets/svg/icons/report_off.svg"),
-              activeIcon: SvgPicture.asset("assets/svg/icons/report_on.svg"),
-              label: "AI 리포트",
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset("assets/svg/icons/alarm_off.svg"),
-              activeIcon: SvgPicture.asset("assets/svg/icons/alarm_on.svg"),
-              label: "로그 확인",
-            ),
-            BottomNavigationBarItem(
-              icon: SvgPicture.asset("assets/svg/icons/user_off.svg"),
-              activeIcon: SvgPicture.asset(
-                "assets/svg/icons/user_on.svg",
-                width: 22,
+        () => Container(
+          decoration: BoxDecoration(
+            color: Colors.white, // 배경색을 하얀색으로 설정
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3), // 그림자 색상
+                spreadRadius: 1, // 그림자의 퍼짐 반경
+                blurRadius: 5, // 그림자 블러 정도
+                offset: const Offset(0, -2), // 그림자의 위치 (위쪽)
               ),
-              label: "마이 페이지",
-            ),
-          ],
+            ],
+          ),
+          child: BottomNavigationBar(
+            backgroundColor: Colors.white, // BottomNavigationBar의 배경색을 하얀색으로 설정
+            type: BottomNavigationBarType.fixed,
+            currentIndex: controller.currentIndex.value,
+            selectedItemColor: Colors.black, // 선택된 아이템 글자색을 검정색으로 설정
+            unselectedItemColor: Colors.black
+                .withOpacity(0.6), // 선택되지 않은 아이템 글자색을 약간 투명한 검정색으로 설정
+            showSelectedLabels: true,
+            showUnselectedLabels: true,
+            onTap: controller.changePageIndex,
+            items: [
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset("assets/svg/icons/video_off.svg"),
+                activeIcon: SvgPicture.asset("assets/svg/icons/video_on.svg"),
+                label: "모니터링",
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset("assets/svg/icons/report_off.svg"),
+                activeIcon: SvgPicture.asset("assets/svg/icons/report_on.svg"),
+                label: "AI 리포트",
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset("assets/svg/icons/alarm_off.svg"),
+                activeIcon: SvgPicture.asset("assets/svg/icons/alarm_on.svg"),
+                label: "로그 확인",
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset("assets/svg/icons/user_off.svg"),
+                activeIcon: SvgPicture.asset(
+                  "assets/svg/icons/user_on.svg",
+                  width: 22,
+                ),
+                label: "마이 페이지",
+              ),
+            ],
+          ),
         ),
       ),
     );

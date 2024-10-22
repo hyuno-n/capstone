@@ -38,40 +38,58 @@ class _LogPageState extends State<LogPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        elevation: 1.2,
-        title: const Text(
-          'Log check',
-          style: TextStyle(fontSize: 15),
-        ),
-        centerTitle: true,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
+      backgroundColor: Colors.white, // 배경색을 흰색으로 설정
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(56.0), // AppBar 기본 높이
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white, // AppBar 배경을 흰색으로 설정
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3), // 그림자 색상
+                spreadRadius: 1, // 그림자의 퍼짐 정도
+                blurRadius: 5, // 그림자 흐림 정도
+                offset: const Offset(0, 2), // 그림자 위치 (아래쪽으로 약간)
+              ),
+            ],
           ),
-        ),
-        actions: [
-          Builder(
-            builder: (context) {
-              return IconButton(
-                icon: const Icon(Icons.notifications),
+          child: AppBar(
+            elevation: 0, // 기본 elevation 제거
+            backgroundColor: Colors.transparent, // 투명 배경 설정
+            title: const Text(
+              'Log check',
+              style: TextStyle(fontSize: 15),
+            ),
+            centerTitle: true,
+            leading: Builder(
+              builder: (context) => IconButton(
+                icon: const Icon(Icons.menu),
                 onPressed: () {
-                  Scaffold.of(context).openEndDrawer();
+                  Scaffold.of(context).openDrawer();
                 },
-              );
-            },
+              ),
+            ),
+            actions: [
+              Builder(
+                builder: (context) {
+                  return IconButton(
+                    icon: const Icon(Icons.notifications),
+                    onPressed: () {
+                      Scaffold.of(context).openEndDrawer();
+                    },
+                  );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete),
+                onPressed: () {
+                  _logController.clearLogs();
+                  updateLogs();
+                },
+              ),
+            ],
           ),
-          IconButton(
-            icon: const Icon(Icons.delete),
-            onPressed: () {
-              _logController.clearLogs();
-              updateLogs();
-            },
-          ),
-        ],
+        ),
       ),
       drawer: const DrawerWidget(),
       endDrawer: const EndDrawerWidget(),
