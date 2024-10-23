@@ -22,7 +22,7 @@ class User_page extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                spreadRadius: 1, // 그림자의 퍼짐 정도
+                spreadRadius: 0.8, // 그림자의 퍼짐 정도
                 blurRadius: 5, // 그림자 흐림 정도
                 offset: const Offset(0, 2), // 그림자 위치 (아래쪽으로 약간)
               ),
@@ -71,7 +71,8 @@ class User_page extends StatelessWidget {
               children: [
                 const CircleAvatar(
                   radius: 40,
-                  backgroundImage: AssetImage('assets/images/profile.jpg'),
+                  backgroundImage:
+                      AssetImage('assets/images/user_page_profile.jpg'),
                 ),
                 const SizedBox(width: 20),
                 Text(
@@ -85,94 +86,140 @@ class User_page extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Container(
-              height: 70,
-              decoration: const BoxDecoration(
-                color: Color(0xFFDDDDDD),
+              height: 85,
+              decoration: BoxDecoration(
+                color: const Color.fromARGB(255, 255, 255, 255),
                 borderRadius:
-                    BorderRadius.all(Radius.circular(5)), // 모든 모서리를 둥글게
+                    const BorderRadius.all(Radius.circular(5)), // 모든 모서리를 둥글게
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.13), // 그림자 색상 및 투명도
+                    spreadRadius: 0.5, // 그림자의 퍼짐 정도
+                    blurRadius: 5, // 그림자의 흐림 정도
+                    offset: const Offset(1, 1), // 그림자의 위치 (세로로 3px 아래로 이동)
+                  ),
+                ],
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Center(
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(color: Colors.black),
-                          children: [
-                            TextSpan(
-                              text: '감지된 건\n',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/user_detection_icon.gif', // GIF 아이콘 경로
+                            width: 40, // 아이콘의 너비
+                            height: 40, // 아이콘의 높이
+                          ),
+                          const SizedBox(height: 1), // 아이콘과 텍스트 간격
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '감지된 건 ', // 개행 없이 수평 배치
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            TextSpan(
-                              text: '0',
-                              style: TextStyle(
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                              Text(
+                                '0', // 수평으로 나열
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const VerticalDivider(width: 1, color: Colors.grey), // 구분선 추가
+
+                  const SizedBox(
+                    height: 50, // 원하는 높이로 설정
+                    child: VerticalDivider(
+                      width: 0.5, thickness: 1, // 구분선의 두께
+                      color: Color.fromARGB(255, 223, 223, 223),
+                    ),
+                  ), // 구분선 추가
                   Expanded(
                     child: Center(
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(color: Colors.black),
-                          children: [
-                            TextSpan(
-                              text: '카메라 개수\n',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/user_camera_icon.gif', // GIF 아이콘 경로
+                            width: 40, // 아이콘의 너비
+                            height: 40, // 아이콘의 높이
+                          ),
+                          const SizedBox(height: 1), // 아이콘과 텍스트 간격
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '카매라 개수 ', // 개행 없이 수평 배치
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            TextSpan(
-                              text: '2',
-                              style: TextStyle(
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                              Text(
+                                '2', // 수평으로 나열
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                  const VerticalDivider(width: 1, color: Colors.grey), // 구분선 추가
+
+                  const SizedBox(
+                    height: 50, // 원하는 높이로 설정
+                    child: VerticalDivider(
+                      width: 0.5, thickness: 1, // 구분선의 두께
+                      color: Color.fromARGB(255, 223, 223, 223),
+                    ),
+                  ), // 구분선 추가
                   Expanded(
                     child: Center(
-                      child: RichText(
-                        textAlign: TextAlign.center,
-                        text: const TextSpan(
-                          style: TextStyle(color: Colors.black),
-                          children: [
-                            TextSpan(
-                              text: '클립 개수\n',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.black,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Image.asset(
+                            'assets/images/user_clip_icon.gif', // GIF 아이콘 경로
+                            width: 40, // 아이콘의 너비
+                            height: 40, // 아이콘의 높이
+                          ),
+                          const SizedBox(height: 1), // 아이콘과 텍스트 간격
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                '클립 개수 ', // 개행 없이 수평 배치
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                            TextSpan(
-                              text: '0',
-                              style: TextStyle(
-                                fontSize: 25,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
+                              Text(
+                                '0', // 수평으로 나열
+                                style: TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                        ],
                       ),
                     ),
                   ),
