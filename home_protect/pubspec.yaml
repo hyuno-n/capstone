@@ -99,6 +99,10 @@ flutter:
     - assets/images/range_detection_set.gif
     - assets/images/notice_icon.gif
     - assets/images/setting_icon.gif
+    - assets/images/user_page_profile.jpg
+    - assets/images/user_camera_icon.gif
+    - assets/images/user_clip_icon.gif
+    - assets/images/user_detection_icon.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -19,17 +19,16 @@ class DrawerWidget extends StatelessWidget {
           Obx(
             () => UserAccountsDrawerHeader(
                 currentAccountPicture: const CircleAvatar(
-                  backgroundImage: AssetImage('images/user_profile.png'),
+                  backgroundImage:
+                      AssetImage('assets/images/user_page_profile.jpg'),
                   backgroundColor: Colors.white,
                 ),
                 accountName: Text(userController.username.value),
                 accountEmail: const Text('lay_down?@gmail.com'),
-                onDetailsPressed: () {
-                  print('arrow is clicked');
-                },
                 otherAccountsPictures: const [
                   CircleAvatar(
-                    backgroundImage: AssetImage('images/user_profile.png'),
+                    backgroundImage:
+                        AssetImage('assets/images/user_page_profile.jpg'),
                     backgroundColor: Colors.white,
                   ),
                 ],
