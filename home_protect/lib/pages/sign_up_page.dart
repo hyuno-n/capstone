@@ -118,7 +118,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
           );
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Failed to add user: ${response.body}')),
+            SnackBar(content: Text('Failed tao add user: ${response.body}')),
           );
         }
       } catch (e) {

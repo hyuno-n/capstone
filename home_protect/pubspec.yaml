@@ -86,6 +86,7 @@ flutter:
     - assets/svg/icons/microphone.svg
     - assets/svg/icons/plus_button.svg
     - assets/svg/icons/play_button.svg
+    - assets/svg/icons/delete_icon.svg
     - images/user_profile.png
     - video/youtube_video.mp4
     - images/sip.png
