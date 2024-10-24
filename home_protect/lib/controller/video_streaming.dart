@@ -27,6 +27,7 @@ class Streaming extends StatefulWidget {
 class _StreamingState extends State<Streaming> {
   late VlcPlayerController vlcViewController;
   double _volume = 100.0;
+  bool _isVolumeSliderVisible = false; // 슬라이더 가시성 상태
 
   @override
   void initState() {
@@ -50,6 +51,7 @@ class _StreamingState extends State<Streaming> {
       _volume = volume;
     });
     vlcViewController.setVolume(volume.toInt());
+    print("현재 볼륨: ${volume.toInt()}%"); // 볼륨 값 디버그 콘솔에 출력
   }
 
   void _showDeleteConfirmationDialog(BuildContext context) {
@@ -79,6 +81,13 @@ class _StreamingState extends State<Streaming> {
     );
   }
 
+  // 볼륨 슬라이더를 토글하는 메서드
+  void _toggleVolumeSlider() {
+    setState(() {
+      _isVolumeSliderVisible = !_isVolumeSliderVisible;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -87,18 +96,41 @@ class _StreamingState extends State<Streaming> {
       margin: const EdgeInsets.all(10),
       child: Column(
         children: [
-          SizedBox(
-            height: 250,
-            child: VlcPlayer(
-              controller: vlcViewController,
-              aspectRatio: 16 / 9,
-              placeholder: const SizedBox(
-                height: 250.0,
-                child: Center(
-                  child: CircularProgressIndicator(),
+          Stack(
+            children: [
+              SizedBox(
+                height: 250,
+                child: VlcPlayer(
+                  controller: vlcViewController,
+                  aspectRatio: 16 / 9,
+                  placeholder: const SizedBox(
+                    height: 250.0,
+                    child: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  ),
                 ),
               ),
-            ),
+              // 슬라이더
+              if (_isVolumeSliderVisible)
+                Positioned(
+                  left: 20,
+                  right: 20,
+                  bottom: -5, // 아이콘 위쪽에 표시되도록 위치 조정
+                  child: Slider(
+                    value: _volume, // 현재 볼륨
+                    min: 0, // 최소값
+                    max: 100, // 최대값
+                    divisions: 100, // 0~100 구간을 100으로 나누기
+                    label: "${_volume.toInt()}%", // 슬라이더 레이블 표시
+                    onChanged: (double value) {
+                      _setVolume(value);
+                    },
+                    activeColor: Colors.grey[400], // 슬라이더 활성 색상
+                    inactiveColor: Colors.white54, // 슬라이더 비활성 색상
+                  ),
+                ),
+            ],
           ),
           Container(
             height: 50,
@@ -132,7 +164,9 @@ class _StreamingState extends State<Streaming> {
                 ),
                 IconButton(
                   icon: SvgPicture.asset("assets/svg/icons/audio_on.svg"),
-                  onPressed: widget.onVolumeToggle, // 콜백 호출
+                  onPressed: () {
+                    _toggleVolumeSlider(); // 볼륨 슬라이더 표시 토글
+                  },
                 ),
                 IconButton(
                   icon: SvgPicture.asset(
@@ -150,12 +184,16 @@ class _StreamingState extends State<Streaming> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const FullscreenVideoPage(
-                          rtspUrl:
-                              "rtsp://210.99.70.120:1935/live/cctv008.stream", // 스트림 URL
+                        builder: (context) => FullscreenVideoPage( //ai_fullscreen.dart 에서 가져옴
+                          rtspUrl: widget.rtspUrl, // fullscreen에 사용할 rtspUrl
                         ),
                       ),
-                    );
+                    ).then((_) {
+                      // UI가 사라지게 하는 처리
+                      setState(() {
+                        _isVolumeSliderVisible = false; // 슬라이더 숨기기
+                      });
+                    });
                   },
                 ),
               ],
