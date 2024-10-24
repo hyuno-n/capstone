@@ -18,26 +18,31 @@ class DrawerWidget extends StatelessWidget {
         children: [
           Obx(
             () => UserAccountsDrawerHeader(
-                currentAccountPicture: const CircleAvatar(
+              currentAccountPicture: const CircleAvatar(
+                backgroundImage:
+                    AssetImage('assets/images/user_page_profile.jpg'),
+                backgroundColor: Colors.white,
+              ),
+              accountName: Text(userController.username.value),
+              accountEmail: const Text('lay_down?@gmail.com'),
+              otherAccountsPictures: const [
+                CircleAvatar(
                   backgroundImage:
                       AssetImage('assets/images/user_page_profile.jpg'),
                   backgroundColor: Colors.white,
                 ),
-                accountName: Text(userController.username.value),
-                accountEmail: const Text('lay_down?@gmail.com'),
-                otherAccountsPictures: const [
-                  CircleAvatar(
-                    backgroundImage:
-                        AssetImage('assets/images/user_page_profile.jpg'),
-                    backgroundColor: Colors.white,
-                  ),
-                ],
-                decoration: BoxDecoration(
-                    color: Colors.red[400],
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(40.0),
-                      bottomRight: Radius.circular(40.0),
-                    ))),
+              ],
+              decoration: BoxDecoration(
+                color: Colors.red[400],
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(15.0),
+                  bottomRight: Radius.circular(15.0),
+                ),
+                border: const Border(
+                  bottom: BorderSide.none, // 아래 경계선을 없앰
+                ),
+              ),
+            ),
           ),
           ListTile(
             leading: Icon(
