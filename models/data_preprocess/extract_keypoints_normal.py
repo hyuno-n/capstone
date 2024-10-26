@@ -8,7 +8,7 @@ excluded_indexes = {6, 7, 8, 9}
 desired_order = [9, 8, 10, 7, 11, 6, 3, 2, 4, 1, 5, 0]
 
 # 입력 폴더와 출력 폴더 경로 설정
-input_folder = './dataset/train/정상'
+input_folder = 'data/train/정상'
 output_folder = '정상 키포인트'
 os.makedirs(output_folder, exist_ok=True)
 

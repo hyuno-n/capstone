@@ -5,8 +5,8 @@ import os
 excluded_indexes = {0, 1, 2, 9}
 
 # 입력 폴더와 출력 폴더 경로 설정
-input_folder = './dataset/train/떨어짐'
-output_folder = '떨어짐_키포인트'
+input_folder = 'data/train/넘어짐'
+output_folder = '넘어짐_키포인트'
 os.makedirs(output_folder, exist_ok=True)
 
 # 폴더 내의 모든 JSON 파일 처리
