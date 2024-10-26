@@ -12,14 +12,14 @@ GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 
 # LSTM 모델 및 YOLO 모델 불러오기
-lstm_model = load_model('model/lstm_keypoints_model.h5')
-yolo_model = YOLO("model/yolov8s-pose.pt")
+lstm_model = load_model('model/lstm_keypoints_model_plus.h5')
+yolo_model = YOLO("model/yolo11s-pose.pt")
 
 # 클래스 레이블 설정
-classes = ['Fall', 'Fall_down', 'Normal']
+classes = ['Fall', 'Normal']
 
 # 비디오 주소 설정
-cap = cv2.VideoCapture('video/test.mp4')
+cap = cv2.VideoCapture('video/제조현장_넘어짐-02.mp4')
 
 # 기본값으로 설정할 키포인트와 클래스
 default_keypoints = np.zeros((12, 2))  # (12, 2) 형태로, 0,0으로 초기화
@@ -206,9 +206,18 @@ def main():
                     if track:
                         points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                         cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-                    if track_id in object_predictions:
-                        cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-                        
+                        # 각 객체에 대한 라벨을 박스의 왼쪽 위에 표시
+                        if track_id in object_predictions:
+                            predicted_label = object_predictions[track_id]
+                             # track_id가 track_ids에 있는지 확인
+                            if track_id in track_ids:
+                                # 객체의 경계 상자에서 해당하는 좌표 추출
+                                box = boxes[track_ids.index(track_id)]  # 현재 track_id에 해당하는 경계 상자를 찾음
+                                x1, y1, _, _ = map(int, box)  # 좌상단 좌표 사용
+                                
+                                # 라벨을 박스의 왼쪽 위에 표시
+                                cv2.putText(frame, predicted_label, (x1, y1 - 10), 
+                                            cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
         if motion_on:
             frame, motion_detected = detect_movement(frame)
             if motion_detected:

@@ -7,7 +7,7 @@ data_dir = 'dataset'
 output_file = 'keypoints_data.npz'
 
 # 클래스 레이블 설정
-classes = ['넘어짐', '떨어짐', '정상']
+classes = ['넘어짐', '정상']
 
 # 데이터 로드 함수
 def load_data(data_dir, classes):

@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout, TimeDistributed, Flatten
+from tensorflow.keras.layers import LSTM, Dense, Dropout
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import matplotlib.pyplot as plt
@@ -27,13 +27,13 @@ input_shape = (num_keypoints, 2)
 
 # 모델 구축
 model = Sequential()
-model.add(LSTM(64, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))  # 유닛 수 줄이기
-model.add(Dropout(0.3))  # Dropout 비율 높이기
-model.add(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.001)))
+model.add(LSTM(256, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
 model.add(Dropout(0.3))
-model.add(LSTM(64, return_sequences=True, kernel_regularizer=l2(0.001)))
+model.add(LSTM(128, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
+model.add(LSTM(64, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
+model.add(Dropout(0.3))
+model.add(LSTM(32, return_sequences=False, kernel_regularizer=l2(0.001)))  # 마지막 LSTM에서 return_sequences=False로 설정
 model.add(Dense(len(classes), activation='softmax'))
-
 
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
