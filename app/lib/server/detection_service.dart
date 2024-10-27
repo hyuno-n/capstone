@@ -2,8 +2,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-Future<void> sendEventToFlask(
-    String eventType, String userId, String status) async {
+Future<void> sendEventToFlask(bool fall_detection_on, bool fire_detection_on,
+    bool movement_detection_on, String userId) async {
   final String? flaskAppIp = dotenv.env['FLASK_IP'];
   final String? flaskAppPort = dotenv.env['FLASK_PORT'];
   final String flaskUrl = 'http://$flaskAppIp:$flaskAppPort/receive_event';
@@ -15,8 +15,9 @@ Future<void> sendEventToFlask(
         'Content-Type': 'application/json; charset=UTF-8',
       },
       body: jsonEncode(<String, dynamic>{
-        'event_type': eventType,
-        'status': status, // 상태 값 추가
+        'fall_detection': fall_detection_on,
+        'fire_detection': fire_detection_on,
+        'movement_detection': movement_detection_on,
         'user_id': userId,
       }),
     );
