@@ -6,6 +6,11 @@ import datetime
 import requests
 from tensorflow.keras.models import load_model
 from collections import defaultdict, deque
+from flask import Flask, request, jsonify
+
+# Flask 서버 설정
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
 
 # 전역 상수 정의
 CONFIDENCE_THRESHOLD = 0.6
@@ -13,14 +18,14 @@ GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 
 # LSTM 모델 및 YOLO 모델 불러오기
-lstm_model = load_model('model/lstm_keypoints_model.h5')
-yolo_model = YOLO("model/yolov8s-pose.pt")
+lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
+yolo_model = YOLO("model/yolo11s-pose.pt")
 
 # 클래스 레이블 설정
 classes = ['Fall', 'Normal']
 
 # RTSP 스트림 주소 설정
-rtsp_url = "rtsp://username:password@camera_ip_address/stream"
+rtsp_url = "rtsp://210.99.70.120:1935/live/cctv008.stream"
 server_url = "http://server_ip_address:5000/set_detection"
 cap = cv2.VideoCapture(rtsp_url)
 
@@ -228,10 +233,23 @@ def get_detection_status():
         print(f"서버 통신 중 오류 발생: {e}")
         return None
 
+@app.route('/event_update', methods=['POST'])
+def event_update():
+    data = request.get_json()
+    event_type = data.get('event_type')
+    status = data.get('status')
+    
+    # 이벤트 수신 시 콘솔에 출력
+    print(f"Received event: {event_type}, Status: {status}")
+    
+    return data
 
 def main():
     """비디오 프로세싱 메인 루프"""
     global frames_after_event
+
+    app.run(host="127.0.0.1", port=8000, debug=True)
+
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
@@ -239,7 +257,7 @@ def main():
         
         # 서버에서 탐지 기능 상태 가져오기
         detection_status = get_detection_status()
-        
+        event_update()
         if detection_status:
             roi_x1 = detection_status['roi_x1']
             roi_y1 = detection_status['roi_y1']
@@ -307,4 +325,5 @@ def main():
     cv2.destroyAllWindows()
 
 if __name__ == "__main__":
+
     main()
