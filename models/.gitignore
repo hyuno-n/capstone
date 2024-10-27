@@ -1,0 +1,13 @@
+# Ignore the data_preprocess folder
+data_preprocess/
+
+# Ignore the dataset folder
+dataset/
+
+# Ignore the saved_clips folder
+saved_clips/
+
+# Ignore the video folder
+video/
+
+video_test.py

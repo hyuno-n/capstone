@@ -43,7 +43,6 @@ track_history, object_predictions = defaultdict(list), {}
 # 기본값으로 설정할 ROI 좌표
 default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2 = 0, 0, 1920, 1080
 
-
 # 탐지 기능 온오프 설정 및 저장 경로 초기화
 output_dir = "saved_clips"  
 if not os.path.exists(output_dir):
@@ -206,7 +205,6 @@ def get_roi_and_signal_from_server():
         print(f"서버 통신 중 오류 발생: {e}")
         # 통신 실패 시 기본값 반환
         return default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2, False
-
 
 def get_detection_status():
     """서버에서 탐지 기능 상태 가져오기"""
