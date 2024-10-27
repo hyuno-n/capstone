@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:home_protect/pages/sign_up_page.dart';
-import 'package:home_protect/src/app.dart';
-import 'package:home_protect/controller/user_controller.dart';
-import 'package:home_protect/controller/log_controller.dart';
+import 'package:app/pages/sign_up_page.dart';
+import 'package:app/src/app.dart';
+import 'package:app/controller/user_controller.dart';
+import 'package:app/controller/log_controller.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';

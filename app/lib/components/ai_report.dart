@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:home_protect/server/detection_service.dart';
+import 'package:app/server/detection_service.dart';
 
 class AiReport extends StatefulWidget {
   const AiReport({super.key});

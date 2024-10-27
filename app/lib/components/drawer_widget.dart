@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:home_protect/controller/user_controller.dart'; // UserController 임포트
-import 'package:home_protect/controller/app_controller.dart'; // AppController 임포트
-// import 'package:home_protect/pages/user_page.dart'; // User_page 임포트
+import 'package:app/controller/user_controller.dart'; // UserController 임포트
+import 'package:app/controller/app_controller.dart'; // AppController 임포트
+// import 'package:app/pages/user_page.dart'; // User_page 임포트
 
 class DrawerWidget extends StatelessWidget {
   const DrawerWidget({super.key});

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
-import 'package:home_protect/controller/app_controller.dart';
-import 'package:home_protect/pages/ai_report_page.dart';
-import 'package:home_protect/pages/log_page.dart';
-import 'package:home_protect/pages/monitoring.dart';
-import 'package:home_protect/pages/user_page.dart';
+import 'package:app/controller/app_controller.dart';
+import 'package:app/pages/ai_report_page.dart';
+import 'package:app/pages/log_page.dart';
+import 'package:app/pages/monitoring.dart';
+import 'package:app/pages/user_page.dart';
 
 class App extends GetView<AppController> {
   const App({super.key});

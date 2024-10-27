@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:home_protect/components/drawer_widget.dart';
-import 'package:home_protect/components/enddrawer_widget.dart';
-import 'package:home_protect/controller/user_controller.dart';
+import 'package:app/components/drawer_widget.dart';
+import 'package:app/components/enddrawer_widget.dart';
+import 'package:app/controller/user_controller.dart';
 import 'package:get/get.dart';
 
 class User_page extends StatelessWidget {
