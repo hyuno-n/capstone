@@ -17,7 +17,7 @@ lstm_model = load_model('model/lstm_keypoints_model.h5')
 yolo_model = YOLO("model/yolov8s-pose.pt")
 
 # 클래스 레이블 설정
-classes = ['Fall', 'Fall_down', 'Normal']
+classes = ['Fall', 'Normal']
 
 # RTSP 스트림 주소 설정
 rtsp_url = "rtsp://username:password@camera_ip_address/stream"
@@ -96,12 +96,6 @@ def draw_skeletons_and_boxes(frame, keypoints_list, boxes):
             cv2.circle(frame, (int(x), int(y)), 3, GREEN, -1)
     
     return frame
-
-def toggle_detection():
-    """탐지 기능을 온오프하는 함수"""
-    global detection_on
-    detection_on = not detection_on
-    print(f"탐지 기능이 {'ON' if detection_on else 'OFF'} 상태입니다.")
 
 def save_event_clip(event_name, frame):
     """이벤트가 발생하면 영상을 저장하는 함수"""
@@ -185,7 +179,7 @@ def draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2):
     """탐지할 영역(ROI)을 프레임에 그리는 함수"""
     cv2.rectangle(frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (0, 0, 255), 2)  # 빨간색 사각형 그리기
 
-def is_in_detection_area(x, y):
+def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
 
@@ -280,7 +274,7 @@ def main():
                 object_predictions[track_id] = predicted_label
                 
                 for (x, y) in keypoints:
-                    if is_in_detection_area(x, y):  # ROI 내에 있는지 확인
+                    if is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):  # ROI 내에 있는지 확인
                         detected_in_roi = True  # ROI 내에서 감지됨
                         break  # 한 번이라도 ROI 안에 있는 점이 있으면 감지 성공으로 처리
                     
@@ -306,9 +300,7 @@ def main():
 
         # 모션 감지 토글 on/off 추후 변경
         key = cv2.waitKey(1)
-        if key == ord('t'):
-            toggle_detection()
-        elif key == ord('q'):
+        if key == ord('q'):
             break
 
     cap.release()
