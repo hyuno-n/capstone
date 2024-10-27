@@ -1,7 +1,7 @@
-# 홈 CCTV 이상행동 탐지 시스템
+# 홈 CCTV 위험 탐지 시스템
 
 ## Introduction
-본 프로젝트는 홈 CCTV를 통해 이상행동을 실시간으로 탐지하는 인공지능 기반 시스템을 개발하는 것을 목표로 합니다. 이 시스템은 LSTM과 YOLOv11 기술을 활용하여 주거 공간에서의 비정상적인 행동 패턴을 인식하고, 즉시 사용자에게 알림을 제공함으로써 보다 빠르고 효과적인 대응을 가능하게 합니다.
+본 프로젝트는 홈 CCTV를 통해 주거 공간에서의 발생할 수 있는 위험을 실시간으로 탐지하는 인공지능 기반 시스템을 개발하는 것을 목표로 합니다. 이 시스템은 LSTM과 YOLOv11 기술을 활용하여 주거 공간에서의 비정상적인 행동 패턴을 인식하고, 즉시 사용자에게 알림을 제공함으로써 보다 빠르고 효과적인 대응을 가능하게 합니다.
 
 ## Members
 - 노현호(이상행동 탐지 모델 개발)
@@ -16,9 +16,9 @@
 
 ## Tech Stack
 - **머신러닝/딥러닝**: TensorFlow, PyTorch
-- **백엔드**: Node.js, Python Flask
-- **프론트엔드**: React for Web, React Native for mobile apps
-- **데이터베이스**: MongoDB, MySQL
+- **백엔드**: Python Flask, AWS ec2
+- **프론트엔드**: Flutter
+- **데이터베이스**: MySQL
 - **하드웨어**: Compatible with various IP cameras and personal devices
 
 ## How to install
