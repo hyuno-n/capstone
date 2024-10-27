@@ -40,6 +40,10 @@ pre_event_buffer = deque(maxlen=buffer_length)
 event_detected, frames_after_event, out = False, 0, None
 track_history, object_predictions = defaultdict(list), {}
 
+# 기본값으로 설정할 ROI 좌표
+default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2 = 0, 0, 1920, 1080
+
+
 # 탐지 기능 온오프 설정 및 저장 경로 초기화
 output_dir = "saved_clips"  
 if not os.path.exists(output_dir):
@@ -142,7 +146,7 @@ def send_alert(event_name):
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
-    if predicted_label in ['Fall', 'Fall_down', 'Movement'] and not event_detected:
+    if predicted_label in ['Fall', 'Movement'] and not event_detected:
         event_detected = True
         frames_after_event = 0
         print(f"{predicted_label} detected!")
@@ -186,20 +190,28 @@ def is_in_detection_area(x, y):
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
 
 def get_roi_and_signal_from_server():
-    # 서버로부터 ROI 좌표와 신호를 받아오는 요청 (임시 URL)
-    response = requests.get(server_url)
-    data = response.json()
+    """서버에서 ROI 좌표와 탐지 기능 신호를 받아옴"""
+    global default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2
+    try:
+        response = requests.get(server_url)
+        data = response.json()
 
-    # ROI 좌표값 (서버에서 받아옴)
-    roi_x1 = data['roi_x1']
-    roi_y1 = data['roi_y1']
-    roi_x2 = data['roi_x2']
-    roi_y2 = data['roi_y2']
-
-    # ROI 적용 신호 (서버에서 받아옴)
-    roi_apply_signal = data['roi_apply_signal']
-
-    return roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal
+        # 서버로부터 신호를 받는 경우 ROI 업데이트
+        roi_apply_signal = data.get('roi_apply_signal', False)
+        if roi_apply_signal:
+            roi_x1 = data.get('roi_x1', default_roi_x1)
+            roi_y1 = data.get('roi_y1', default_roi_y1)
+            roi_x2 = data.get('roi_x2', default_roi_x2)
+            roi_y2 = data.get('roi_y2', default_roi_y2)
+        else:
+            # 기본값으로 ROI 설정
+            roi_x1, roi_y1, roi_x2, roi_y2 = default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2
+        
+        return roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal
+    except Exception as e:
+        print(f"서버 통신 중 오류 발생: {e}")
+        # 통신 실패 시 기본값 반환
+        return default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2, False
 
 
 def get_detection_status():
@@ -207,7 +219,16 @@ def get_detection_status():
     try:
         response = requests.get(server_url)
         if response.status_code == 200:
-            return response.json()
+            data = response.json()
+            return {
+                'fainting_detection_on': data.get('fainting_detection_on', False),
+                'movement_detection_on': data.get('movement_detection_on', False),
+                'roi_x1': data.get('roi_x1'),
+                'roi_y1': data.get('roi_y1'),
+                'roi_x2': data.get('roi_x2'),
+                'roi_y2': data.get('roi_y2'),
+                'roi_apply_signal': data.get('roi_apply_signal', False)
+            }
         else:
             print("서버에서 상태를 가져오는 데 실패했습니다.")
             return None
@@ -226,9 +247,15 @@ def main():
         
         # 서버에서 탐지 기능 상태 가져오기
         detection_status = get_detection_status()
+        
         if detection_status:
-            fainting_detection_on = detection_status.get('fainting_detection_on', False)
-            movement_detection_on = detection_status.get('movement_detection_on', False)
+            roi_x1 = detection_status['roi_x1']
+            roi_y1 = detection_status['roi_y1']
+            roi_x2 = detection_status['roi_x2']
+            roi_y2 = detection_status['roi_y2']
+            roi_apply_signal = detection_status['roi_apply_signal']
+            fall_detection_on = detection_status['fall_detection_on']
+            movement_detection_on = detection_status['movement_detection_on']
 
         roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal = get_roi_and_signal_from_server()
 
@@ -238,8 +265,8 @@ def main():
             # 탐지할 영역 그리기
             draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
 
-        # 이상행동 모델
-        if fainting_detection_on:
+        # 넘어짐 감지 
+        if fall_detection_on:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
             predicted_label = default_class
             detected_in_roi = False 
@@ -266,7 +293,7 @@ def main():
                         cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
                     if track_id in object_predictions:
                         cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-        # 움직임 감지(영상처리)                
+        # 움직임 감지              
         if movement_detection_on:
             frame, motion_detected = detect_movement(frame)
             if motion_detected:

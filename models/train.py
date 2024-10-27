@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Conv1D, MaxPooling1D
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import matplotlib.pyplot as plt
@@ -27,12 +27,12 @@ input_shape = (num_keypoints, 2)
 
 # 모델 구축
 model = Sequential()
-model.add(LSTM(256, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
+model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
+model.add(MaxPooling1D(pool_size=2))
+model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.001))))
 model.add(Dropout(0.3))
-model.add(LSTM(128, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
-model.add(LSTM(64, return_sequences=True, input_shape=input_shape, kernel_regularizer=l2(0.001)))
+model.add(Bidirectional(LSTM(64, return_sequences=False, kernel_regularizer=l2(0.001))))
 model.add(Dropout(0.3))
-model.add(LSTM(32, return_sequences=False, kernel_regularizer=l2(0.001)))  # 마지막 LSTM에서 return_sequences=False로 설정
 model.add(Dense(len(classes), activation='softmax'))
 
 model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
@@ -77,4 +77,4 @@ plt.savefig('training_history.png')
 plt.show()
 
 # 모델 저장
-model.save('lstm_keypoints_model_improved.h5')
+model.save('lstm_keypoints_model_improved1.h5')
