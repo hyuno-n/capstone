@@ -79,25 +79,27 @@ def log_event():
     user_id = data.get('user_id')
     timestamp_str = data.get('timestamp')
     eventname = data.get('eventname')
-    camera_number = data.get('camera_number')
+    camera_number = data.get('camera_number')  # camera_number를 포함시키는 경우
 
-    if not user_id or not eventname or not camera_number:
-        return jsonify({"error": "Missing event information"}), 400
+    # user_id가 없는 경우 오류 처리
+    if not user_id:
+        return jsonify({"error": "Missing user_id"}), 400
 
     try:
         timestamp = datetime.fromisoformat(timestamp_str)
     except ValueError:
         return jsonify({"error": "Invalid timestamp format"}), 400
 
+    # EventLog에 user_id를 포함하여 생성
     new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number)
     db.session.add(new_event)
     db.session.commit()
 
+    # SocketIO를 통해 이벤트 푸시
     socketio.emit('push_message', {
         'user_id': user_id,
         'timestamp': timestamp_str,
         'eventname': eventname,
-        'camera_number': camera_number
     })
     return jsonify({"message": "Event logged"}), 200
 
@@ -162,9 +164,9 @@ def receive_event():
 
     model_server_url = f"http://{DL_MODEL_IP}:{DL_MODEL_PORT}/event_update"
     payload = {
-        'fall_detection': fall_detection,
-        'fire_detection': fire_detection,
-        'movement_detection': movement_detection,
+        'fall_detection_on': fall_detection,
+        'fire_detection_on': fire_detection,
+        'movement_detection_on': movement_detection,
         'user_id': user_id
     }
     
