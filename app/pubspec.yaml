@@ -104,6 +104,8 @@ flutter:
     - assets/images/user_camera_icon.gif
     - assets/images/user_clip_icon.gif
     - assets/images/user_detection_icon.gif
+    - assets/images/movement.gif
+    - assets/images/movement_on.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

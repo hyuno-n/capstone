@@ -13,7 +13,7 @@ Future<void> main() async {
     ChangeNotifierProvider(
       create: (context) => CameraProvider(),
       child: const MyApp(),
-    ),
+    ),  
   );
 }
 
