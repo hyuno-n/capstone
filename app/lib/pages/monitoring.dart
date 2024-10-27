@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:home_protect/components/drawer_widget.dart';
-import 'package:home_protect/components/enddrawer_widget.dart';
-import 'package:home_protect/components/video_widget.dart';
+import 'package:app/components/drawer_widget.dart';
+import 'package:app/components/enddrawer_widget.dart';
+import 'package:app/components/video_widget.dart';
 
 class Monitoring extends StatelessWidget {
   const Monitoring({super.key});

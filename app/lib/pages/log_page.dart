@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:home_protect/controller/log_controller.dart';
-import 'package:home_protect/components/log_list.dart';
-import 'package:home_protect/components/drawer_widget.dart';
-import 'package:home_protect/components/enddrawer_widget.dart';
-import 'package:home_protect/controller/user_controller.dart';
+import 'package:app/controller/log_controller.dart';
+import 'package:app/components/log_list.dart';
+import 'package:app/components/drawer_widget.dart';
+import 'package:app/components/enddrawer_widget.dart';
+import 'package:app/controller/user_controller.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});

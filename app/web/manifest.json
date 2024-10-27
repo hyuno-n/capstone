@@ -1,6 +1,6 @@
 {
-    "name": "home_protect",
-    "short_name": "home_protect",
+    "name": "app",
+    "short_name": "app",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

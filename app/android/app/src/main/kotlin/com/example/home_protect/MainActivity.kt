@@ -1,4 +1,4 @@
-package com.example.home_protect
+package com.example.app
 
 import io.flutter.embedding.android.FlutterActivity
 

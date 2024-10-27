@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:home_protect/controller/ai_fullscreen.dart';
+import 'package:app/controller/ai_fullscreen.dart';
 
 class Streaming extends StatefulWidget {
   final bool showVolumeSlider;
@@ -184,7 +184,8 @@ class _StreamingState extends State<Streaming> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => FullscreenVideoPage( //ai_fullscreen.dart 에서 가져옴
+                        builder: (context) => FullscreenVideoPage(
+                          //ai_fullscreen.dart 에서 가져옴
                           rtspUrl: widget.rtspUrl, // fullscreen에 사용할 rtspUrl
                         ),
                       ),

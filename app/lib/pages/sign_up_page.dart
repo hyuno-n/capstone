@@ -1,8 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:home_protect/components/validator.dart';
-import 'package:home_protect/pages/login_page.dart';
+import 'package:app/components/validator.dart';
+import 'package:app/pages/login_page.dart';
 import 'package:kpostal/kpostal.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
