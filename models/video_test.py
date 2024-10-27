@@ -12,14 +12,14 @@ GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 
 # LSTM 모델 및 YOLO 모델 불러오기
-lstm_model = load_model('model/lstm_keypoints_model_plus.h5')
+lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
 yolo_model = YOLO("model/yolo11s-pose.pt")
 
 # 클래스 레이블 설정
 classes = ['Fall', 'Normal']
 
 # 비디오 주소 설정
-cap = cv2.VideoCapture('video/제조현장_넘어짐-02.mp4')
+cap = cv2.VideoCapture('video/제조현장_넘어짐-01.mp4')
 
 # 기본값으로 설정할 키포인트와 클래스
 default_keypoints = np.zeros((12, 2))  # (12, 2) 형태로, 0,0으로 초기화
@@ -124,7 +124,7 @@ def send_alert(event_name):
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
-    if predicted_label in ['Fall', 'Fall_down', 'Movement'] and not event_detected:
+    if predicted_label in ['Fall', 'Movement'] and not event_detected:
         event_detected = True
         frames_after_event = 0
         print(f"{predicted_label} detected!")
@@ -175,7 +175,7 @@ def main():
         if not success:
             break
 
-        frame = cv2.resize(frame, (output_width, output_height))
+        frame = cv2.resize(frame, (output_width, output_height), interpolation=cv2.INTER_CUBIC)
         
         if roi_apply_signal:
             # 탐지할 영역 그리기
