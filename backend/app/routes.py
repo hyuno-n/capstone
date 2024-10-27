@@ -153,13 +153,19 @@ def get_logs():
 @bp.route('/receive_event', methods=['POST'])
 def receive_event():
     data = request.get_json()
-    event_type = data.get('event_type', 'default_event')
-    status = data.get('status', 'activated')
+    
+    # 클라이언트로부터 전송된 감지 상태 값들
+    fall_detection = data.get('fall_detection', False)
+    fire_detection = data.get('fire_detection', False)
+    movement_detection = data.get('movement_detection', False)
+    user_id = data.get('user_id', 'Unknown')
 
     model_server_url = f"http://{DL_MODEL_IP}:{DL_MODEL_PORT}/event_update"
     payload = {
-        'event_type': event_type,
-        'status': status,
+        'fall_detection': fall_detection,
+        'fire_detection': fire_detection,
+        'movement_detection': movement_detection,
+        'user_id': user_id
     }
     
     try:

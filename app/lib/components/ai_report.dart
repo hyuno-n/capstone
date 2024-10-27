@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/server/detection_service.dart';
 
 class AiReport extends StatefulWidget {
   const AiReport({super.key});
@@ -57,6 +58,7 @@ class _AiReportState extends State<AiReport>
       setState(() {
         isFallDetectionOn = value;
         _saveSwitchState('fallDetection', value);
+        _updateAllDetectionStates();
       });
     }
   }
@@ -68,6 +70,7 @@ class _AiReportState extends State<AiReport>
       setState(() {
         isFireDetectionOn = value;
         _saveSwitchState('fireDetection', value);
+        _updateAllDetectionStates();
       });
     }
   }
@@ -79,6 +82,7 @@ class _AiReportState extends State<AiReport>
       setState(() {
         isMovementDetectionOn = value;
         _saveSwitchState('movementDetection', value);
+        _updateAllDetectionStates();
       });
     }
   }
@@ -120,6 +124,7 @@ class _AiReportState extends State<AiReport>
                     isMovementDetectionOn = true;
                     _saveSwitchState('movementDetection', true);
                   }
+                  _updateAllDetectionStates(); // 모든 감지 상태 전송
                 });
                 Navigator.of(context).pop();
               },
@@ -127,6 +132,15 @@ class _AiReportState extends State<AiReport>
           ],
         );
       },
+    );
+  }
+
+  void _updateAllDetectionStates() {
+    sendEventToFlask(
+      isFallDetectionOn,
+      isFireDetectionOn,
+      isMovementDetectionOn,
+      'user123',
     );
   }
 
