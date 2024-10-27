@@ -48,7 +48,6 @@ class _VideoWidgetState extends State<VideoWidget> {
             CupertinoDialogAction(
               child: const Text("적용"),
               onPressed: () {
-                // RTSP URL 리스트에 추가
                 if (_textEditingController.text.isNotEmpty) {
                   Provider.of<CameraProvider>(context, listen: false)
                       .addCamera(_textEditingController.text);
@@ -95,19 +94,18 @@ class _VideoWidgetState extends State<VideoWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final cameraProvider =
-        Provider.of<CameraProvider>(context); // CameraProvider 사용
+    final cameraProvider = Provider.of<CameraProvider>(context);
 
     return ListView(
       children: [
-        // 추가된 카메라를 동적으로 표시
         for (int i = 0; i < cameraProvider.rtspUrls.length; i++)
           Streaming(
+            key: ValueKey(cameraProvider.rtspUrls[i]), // 고유한 Key를 URL로 설정
             showVolumeSlider: _showVolumeSlider,
-            rtspUrl: cameraProvider.rtspUrls[i], // RTSP URL
-            cameraName: 'Camera ${i + 1}', // 카메라 이름
-            onVolumeToggle: _toggleVolumeSlider, // 볼륨 토글 콜백 추가
-            onDelete: () => _deleteCamera(i), // 삭제 콜백 추가
+            rtspUrl: cameraProvider.rtspUrls[i],
+            cameraName: 'Camera ${i + 1}',
+            onVolumeToggle: _toggleVolumeSlider,
+            onDelete: () => _deleteCamera(i),
           ),
         _plusVideo(),
       ],
