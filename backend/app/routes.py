@@ -15,8 +15,8 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "your_secret_key")
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-DL_MODEL_IP = os.getenv("DL_MODEL_IP", "127.0.0.1")
-DL_MODEL_PORT = os.getenv("DL_MODEL_PORT", "8000")
+DL_MODEL_IP = os.getenv("DL_MODEL_IP")
+DL_MODEL_PORT = os.getenv("DL_MODEL_PORT")
 
 bp = Blueprint('main', __name__)
 CORS(app)
@@ -155,7 +155,6 @@ def receive_event():
     data = request.get_json()
     event_type = data.get('event_type', 'default_event')
     status = data.get('status', 'activated')
-    timestamp = data.get('timestamp')
 
     model_server_url = f"http://{DL_MODEL_IP}:{DL_MODEL_PORT}/event_update"
     payload = {
@@ -164,10 +163,14 @@ def receive_event():
     }
     
     try:
-        response = requests.post(model_server_url, json=payload)
-        print(f"Event sent to model server: {response.status_code}")
+        response = requests.post(model_server_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print("서버에 신호 전송 완료.")
+        else:
+            print("서버 신호 전송 실패:", response.status_code)
+        
     except requests.exceptions.RequestException as e:
-        print(f"Error sending event to model server: {e}")
+        print("오류 발생:", e)
 
     return jsonify({"message": "Event transmitted successfully"}), 200
 
