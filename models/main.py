@@ -3,12 +3,14 @@ import numpy as np
 import cv2
 import os
 import datetime
-import requests
 from tensorflow.keras.models import load_model
 from collections import defaultdict, deque
 from flask import Flask, request, jsonify
+import threading
+from dotenv import load_dotenv
 
 # Flask 서버 설정
+load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
 
@@ -26,7 +28,7 @@ classes = ['Fall', 'Normal']
 
 # RTSP 스트림 주소 설정
 rtsp_url = "rtsp://210.99.70.120:1935/live/cctv008.stream"
-server_url = "http://server_ip_address:5000/set_detection"
+
 cap = cv2.VideoCapture(rtsp_url)
 
 # 기본값으로 설정할 키포인트와 클래스
@@ -52,6 +54,13 @@ default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2 = 0, 0, 1920, 108
 output_dir = "saved_clips" 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
+
+# 전역 변수 선언
+roi_x1 = 0
+roi_y1 = 0
+roi_x2 = 1920
+roi_y2 = 1080
+
 
 def detect_people_and_keypoints(frame):
     """주어진 프레임에서 사람 및 키포인트 탐지"""
@@ -105,7 +114,7 @@ def save_event_clip(event_name, frame):
     """이벤트가 발생하면 영상을 저장하는 함수"""
     global out
     if out is None:
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         clip_filename = os.path.join(output_dir, f"{event_name}_{timestamp}.mp4")
         out = cv2.VideoWriter(clip_filename, fourcc, fps, (frame_width, frame_height))
 
@@ -119,28 +128,6 @@ def save_event_clip(event_name, frame):
     
     out.write(frame)
 
-def send_alert(event_name):
-    """이벤트 발생 시 알림을 보내는 함수"""
-    print(f"경고: {event_name} 발생! 알림 전송 중...")
-    
-    # 서버에 알림 전송
-    url = server_url
-    timestamp = datetime.datetime.now().isoformat()
-    
-    payload = {
-        'event_type': event_name,
-        'timestamp': timestamp
-    }
-    
-    try:
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            print("서버에 신호 전송 완료.")
-        else:
-            print("서버 신호 전송 실패:", response.status_code)
-    except Exception as e:
-        print("오류 발생:", e)
-
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
@@ -152,7 +139,7 @@ def handle_event_detection(frame, predicted_label):
     
     if event_detected:
         pre_event_buffer.append(frame)
-        save_event_clip(predicted_label, frame)
+        # save_event_clip(predicted_label, frame)
         frames_after_event += 1
 
         if frames_after_event >= post_event_length:
@@ -161,7 +148,7 @@ def handle_event_detection(frame, predicted_label):
             out = None
             print("이벤트 클립 저장 완료.")
 
-def detect_movement(frame, min_contour_area = 20000):
+def detect_movement(frame, min_contour_area = 10000):
     bg_subtractor = cv2.createBackgroundSubtractorMOG2()
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
@@ -186,94 +173,79 @@ def draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2):
 def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
-
-def get_roi_and_signal_from_server():
-    """서버에서 ROI 좌표와 탐지 기능 신호를 받아옴"""
-    global default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2
-    try:
-        response = requests.get(server_url)
-        data = response.json()
-
-        # 서버로부터 신호를 받는 경우 ROI 업데이트
-        roi_apply_signal = data.get('roi_apply_signal', False)
-        if roi_apply_signal:
-            roi_x1 = data.get('roi_x1', default_roi_x1)
-            roi_y1 = data.get('roi_y1', default_roi_y1)
-            roi_x2 = data.get('roi_x2', default_roi_x2)
-            roi_y2 = data.get('roi_y2', default_roi_y2)
-        else:
-            # 기본값으로 ROI 설정
-            roi_x1, roi_y1, roi_x2, roi_y2 = default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2
-        
-        return roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal
-    except Exception as e:
-        print(f"서버 통신 중 오류 발생: {e}")
-        # 통신 실패 시 기본값 반환
-        return default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2, False
-
-def get_detection_status():
-    """서버에서 탐지 기능 상태 가져오기"""
-    try:
-        response = requests.get(server_url)
-        if response.status_code == 200:
-            data = response.json()
-            return {
-                'fainting_detection_on': data.get('fainting_detection_on', False),
-                'movement_detection_on': data.get('movement_detection_on', False),
-                'roi_x1': data.get('roi_x1'),
-                'roi_y1': data.get('roi_y1'),
-                'roi_x2': data.get('roi_x2'),
-                'roi_y2': data.get('roi_y2'),
-                'roi_apply_signal': data.get('roi_apply_signal', False)
-            }
-        else:
-            print("서버에서 상태를 가져오는 데 실패했습니다.")
-            return None
-    except Exception as e:
-        print(f"서버 통신 중 오류 발생: {e}")
-        return None
-
+    
 @app.route('/event_update', methods=['POST'])
 def event_update():
-    data = request.get_json()
-    event_type = data.get('event_type')
-    status = data.get('status')
+    """서버에서 탐지 기능 상태 가져오기"""
+    global fall_detection_on
+    global movement_detection_on
     
-    # 이벤트 수신 시 콘솔에 출력
-    print(f"Received event: {event_type}, Status: {status}")
-    
-    return data
+    try:
+        # request.get_json() 사용하여 POST 요청의 JSON 데이터 가져오기
+        data = request.get_json()
+        if data is None:
+            return jsonify({"error": "No JSON received"}), 400
+        
+        # JSON 데이터에서 fall_detection과 movement_detection 값을 가져오기
+        fall_detection_on = data.get('fall_detection_on', False)
+        movement_detection_on = data.get('movement_detection_on', False)
 
-def main():
+        # 상태를 확인하기 위해서 로그 출력
+        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}")
+
+        # 성공적인 응답 반환
+        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on}), 200
+
+    except Exception as e:
+        print(f"서버 통신 중 오류 발생: {e}")
+        return jsonify({"error": "Internal server error"}), 500
+
+
+def send_alert(event_name):
+    """이벤트 발생 시 알림을 보내는 함수"""
+    print(f"경고: {event_name} 발생! 알림 전송 중...")
+    
+    url = f"http://{os.getenv('flask_app_ip/', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '8000')}/log_event"
+
+    timestamp = datetime.datetime.now().isoformat()
+    
+    payload = {
+        'timestamp': timestamp,
+        'eventname': event_name
+    }
+    
+    try:
+        response = request.post(url, json=payload)
+        if response.status_code == 200:
+            print("서버에 신호 전송 완료.")
+        else:
+            print("서버 신호 전송 실패:", response.status_code)
+    except Exception as e:
+        print("오류 발생:", e)
+
+def process_video():
     """비디오 프로세싱 메인 루프"""
     global frames_after_event
+    global fall_detection_on 
+    global movement_detection_on  
+    global roi_apply_signal  
 
-    app.run(host="127.0.0.1", port=8000, debug=True)
+    fall_detection_on = False  
+    movement_detection_on = False
+    roi_apply_signal = False  
 
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
             break
-        
-        # 서버에서 탐지 기능 상태 가져오기
-        detection_status = get_detection_status()
-        event_update()
-        if detection_status:
-            roi_x1 = detection_status['roi_x1']
-            roi_y1 = detection_status['roi_y1']
-            roi_x2 = detection_status['roi_x2']
-            roi_y2 = detection_status['roi_y2']
-            roi_apply_signal = detection_status['roi_apply_signal']
-            fall_detection_on = detection_status['fall_detection_on']
-            movement_detection_on = detection_status['movement_detection_on']
 
-        roi_x1, roi_y1, roi_x2, roi_y2, roi_apply_signal = get_roi_and_signal_from_server()
+        roi_x1, roi_y1, roi_x2, roi_y2 = 0, 0, 1920, 1080
 
         frame = cv2.resize(frame, (output_width, output_height))
         
         if roi_apply_signal:
-            # 탐지할 영역 그리기
-            draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
+        # 탐지할 영역 그리기
+           draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
 
         # 넘어짐 감지 
         if fall_detection_on:
@@ -314,7 +286,6 @@ def main():
         
         cv2.imshow('Video', frame)
 
-        # 모션 감지 토글 on/off 추후 변경
         key = cv2.waitKey(1)
         if key == ord('q'):
             break
@@ -324,6 +295,10 @@ def main():
         out.release()
     cv2.destroyAllWindows()
 
-if __name__ == "__main__":
+def main():
+    video_thread = threading.Thread(target=process_video)
+    video_thread.start()
+    app.run(host="0.0.0.0", port=8000, debug=True)
 
+if __name__ == "__main__":
     main()
