@@ -205,6 +205,7 @@ def handle_event_detection(frame, predicted_label):
             event_detected = False
 
 def detect_movement(frame, min_contour_area = 10000):
+    """영상처리를 이용한 움직임 감지"""
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, None, iterations=2)
