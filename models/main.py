@@ -38,6 +38,7 @@ WHITE = (255, 255, 255)
 # LSTM 모델 및 YOLO 모델 불러오기
 lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
 yolo_model = YOLO("model/yolo11s-pose.pt")
+fire_detect_model = YOLO("model/yolo11n-fire.pt")
 
 # 클래스 레이블 설정
 classes = ['Fall', 'Normal']
@@ -191,7 +192,7 @@ def upload_to_s3(local_filepath, s3_bucket_name, s3_key):
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
-    if predicted_label in ['Fall', 'Movement'] and not event_detected:
+    if predicted_label in ['Fall', 'Movement','Black_smoke','Gray_smoke','White_smoke','Fire'] and not event_detected:
         event_detected = True
         frames_after_event = 0
         print(f"{predicted_label} detected!")
@@ -228,11 +229,13 @@ def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
     
 @app.route('/event_update', methods=['POST'])
+
 def event_update():
     """서버에서 탐지 기능 상태 가져오기"""
     global fall_detection_on
     global movement_detection_on
-    
+    global fire_detection_on
+
     try:
         # request.get_json() 사용하여 POST 요청의 JSON 데이터 가져오기
         data = request.get_json()
@@ -242,12 +245,13 @@ def event_update():
         # JSON 데이터에서 fall_detection과 movement_detection 값을 가져오기
         fall_detection_on = data.get('fall_detection_on', False)
         movement_detection_on = data.get('movement_detection_on', False)
+        fire_detection_on = data.get('fire_detection_on', False)
 
         # 상태를 확인하기 위해서 로그 출력
-        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}")
+        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}, Fire detection: {fire_detection_on}")
 
         # 성공적인 응답 반환
-        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on}), 200
+        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on,"fire_detection":fire_detection_on}), 200
 
     except Exception as e:
         print(f"서버 통신 중 오류 발생: {e}")
@@ -282,10 +286,12 @@ def process_video():
     global frames_after_event
     global fall_detection_on 
     global movement_detection_on  
+    global fire_detection_on  
     global roi_apply_signal  
 
     fall_detection_on = False  
     movement_detection_on = False
+    fire_detection_on = False
     roi_apply_signal = False  
 
     while cap.isOpened():
@@ -329,12 +335,40 @@ def process_video():
                         cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
                     if track_id in object_predictions:
                         cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
         # 움직임 감지              
         if movement_detection_on:
             frame, motion_detected = detect_movement(frame)
             if motion_detected:
                 handle_event_detection(frame, 'Movement')
-            
+        
+        # 화재 감지
+        if fire_detection_on:
+            fire_predictions=fire_detect_model.predict(source=frame, stream=True)
+            fire_detected_in_roi = False
+            for fire_predictions.boxes in fire_predictions:
+                for box in fire_predictions.boxes:
+                    # 바운딩 박스 좌표 추출
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    
+                    # 클래스 이름과 점수 가져오기
+                    class_id = int(box.cls[0])
+                    class_name = fire_detect_model.names[class_id]
+                    score = box.conf[0]
+
+                     # ROI 내에 바운딩 박스가 완전히 포함되는지 확인
+                    if (roi_x1 <= x1 <= roi_x2 and roi_x1 <= x2 <= roi_x2 and
+                        roi_y1 <= y1 <= roi_y2 and roi_y1 <= y2 <= roi_y2):
+                        fire_detected_in_roi = True  # ROI 내에서 감지됨
+                        break 
+
+            if fire_detected_in_roi:
+                handle_event_detection(frame, class_name)
+                # 바운딩 박스와 클래스 이름 및 점수 표시
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                label = f"{class_name}: {score:.2f}"
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
         if out:
             out.write(frame)
         
