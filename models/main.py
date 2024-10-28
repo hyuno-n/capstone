@@ -49,7 +49,7 @@ track_history, object_predictions = defaultdict(list), {}
 default_roi_x1, default_roi_y1, default_roi_x2, default_roi_y2 = 0, 0, 1920, 1080
 
 # 탐지 기능 온오프 설정 및 저장 경로 초기화
-output_dir = "saved_clips"  
+output_dir = "saved_clips" 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 

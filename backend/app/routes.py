@@ -100,7 +100,11 @@ def log_event():
         'user_id': user_id,
         'timestamp': timestamp_str,
         'eventname': eventname,
-    })
+        'camera_number':camera_number,
+    },)
+
+    current_app.logger.info("Emitted push_message event to Socket.IO clients")
+
     return jsonify({"message": "Event logged"}), 200
 
 # get_user_events 엔드포인트
@@ -183,4 +187,4 @@ def receive_event():
     return jsonify({"message": "Event transmitted successfully"}), 200
 
 if __name__ == '__main__':
-    socketio.run(app, host=os.getenv("FLASK_APP_IP", "0.0.0.0"), port=int(os.getenv("FLASK_APP_PORT", 5000)))
+    socketio.run(app, host=os.getenv("FLASK_APP_IP", "0.0.0.0"), port=int(os.getenv("FLASK_APP_PORT", 8080)))
