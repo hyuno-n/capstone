@@ -1,5 +1,8 @@
+import 'package:app/components/roi_widget.dart';
+import 'package:app/provider/roi_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/server/detection_service.dart';
 
@@ -10,27 +13,16 @@ class AiReport extends StatefulWidget {
   _AiReportState createState() => _AiReportState();
 }
 
-class _AiReportState extends State<AiReport>
-    with SingleTickerProviderStateMixin {
+class _AiReportState extends State<AiReport> {
   bool isFallDetectionOn = false;
   bool isFireDetectionOn = false;
-  bool isMovementDetectionOn = false; // 움직임 감지 스위치 추가
+  bool isMovementDetectionOn = false;
   bool isDetectionRangeOn = false;
-  Offset? startPosition;
-  Offset? currentPosition;
-  Rect? roiRect;
-  double boxWidth = 400;
-  double boxHeight = 250;
-  late AnimationController _controller;
 
   @override
   void initState() {
     super.initState();
     _loadSwitchStates();
-    _controller = AnimationController(
-      duration: const Duration(milliseconds: 300),
-      vsync: this,
-    );
   }
 
   Future<void> _loadSwitchStates() async {
@@ -40,8 +32,10 @@ class _AiReportState extends State<AiReport>
       isFireDetectionOn = prefs.getBool('fireDetection') ?? false;
       isMovementDetectionOn = prefs.getBool('movementDetection') ?? false;
       isDetectionRangeOn = prefs.getBool('detectionRange') ?? false;
-      if (isDetectionRangeOn) {
-        _controller.forward();
+
+      // ROI 감지 범위 스위치가 꺼져있다면 초기화
+      if (!isDetectionRangeOn) {
+        Provider.of<RoiProvider>(context, listen: false).resetRoi();
       }
     });
   }
@@ -77,7 +71,7 @@ class _AiReportState extends State<AiReport>
 
   void _onMovementDetectionChanged(bool value) {
     if (value) {
-      _showConfirmationDialog(value, null); // 움직임 감지 다이얼로그 호출
+      _showConfirmationDialog(value, null);
     } else {
       setState(() {
         isMovementDetectionOn = value;
@@ -124,7 +118,7 @@ class _AiReportState extends State<AiReport>
                     isMovementDetectionOn = true;
                     _saveSwitchState('movementDetection', true);
                   }
-                  _updateAllDetectionStates(); // 모든 감지 상태 전송
+                  _updateAllDetectionStates();
                 });
                 Navigator.of(context).pop();
               },
@@ -147,49 +141,14 @@ class _AiReportState extends State<AiReport>
   void _onDetectionRangeChanged(bool value) {
     setState(() {
       isDetectionRangeOn = value;
-      if (isDetectionRangeOn) {
-        _controller.forward();
-      } else {
-        _controller.reverse();
-      }
       _saveSwitchState('detectionRange', value);
-    });
-  }
 
-  // 드래그 시작 시
-  void _onPanStart(DragStartDetails details) {
-    setState(() {
-      startPosition = _getLimitedPosition(details.localPosition);
-      currentPosition = startPosition;
-    });
-  }
-
-  // 드래그 중일 때
-  void _onPanUpdate(DragUpdateDetails details) {
-    setState(() {
-      currentPosition = _getLimitedPosition(details.localPosition);
-    });
-  }
-
-  // 드래그 끝날 때
-  void _onPanEnd(DragEndDetails details) {
-    setState(() {
-      if (startPosition != null && currentPosition != null) {
-        roiRect = Rect.fromPoints(startPosition!, currentPosition!);
+      // 감지 범위 스위치가 꺼질 때 ROI 좌표 초기화
+      if (!value) {
+        Provider.of<RoiProvider>(context, listen: false).resetRoi();
+        print("ROI 좌표값이 초기화되었습니다.");
       }
     });
-
-    if (roiRect != null) {
-      print(
-          'ROI 좌표: (${roiRect!.left}, ${roiRect!.top}, ${roiRect!.right}, ${roiRect!.bottom})');
-    }
-  }
-
-  // 위치가 박스를 벗어나지 않도록 제한하는 함수
-  Offset _getLimitedPosition(Offset position) {
-    double x = position.dx.clamp(0.0, boxWidth);
-    double y = position.dy.clamp(0.0, boxHeight);
-    return Offset(x, y);
   }
 
   @override
@@ -319,107 +278,56 @@ class _AiReportState extends State<AiReport>
                 ],
               ),
 
-              // ROI 설정 박스 애니메이션
-              SizeTransition(
-                sizeFactor: _controller,
-                child: ClipRect(
-                  child: Material(
-                    elevation: 4,
-                    shadowColor: Colors.black.withOpacity(0.2),
-                    borderRadius: BorderRadius.circular(8),
-                    child: Container(
-                      height: 335,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        border: Border.all(color: Colors.grey, width: 1),
-                      ),
-                      child: Column(
-                        children: [
-                          const SizedBox(height: 20),
-                          const Text(
-                            "ROI 설정",
-                            style: TextStyle(
-                                fontSize: 20, fontWeight: FontWeight.bold),
-                          ),
-                          const SizedBox(height: 10),
-                          GestureDetector(
-                            onPanStart: _onPanStart,
-                            onPanUpdate: _onPanUpdate,
-                            onPanEnd: _onPanEnd,
-                            child: Container(
-                              width: boxWidth,
-                              height: boxHeight + 2,
-                              decoration: BoxDecoration(
-                                border:
-                                    Border.all(color: Colors.black, width: 2),
-                              ),
-                              child: CustomPaint(
-                                painter: RoiPainter(
-                                  startPosition,
-                                  currentPosition,
-                                  boxWidth,
-                                  boxHeight,
-                                ),
-                              ),
+              // ROI 설정하기 CupertinoButton 추가
+              if (isDetectionRangeOn)
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(vertical: 16.0),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          children: [
+                            SizedBox(width: 3),
+                            Image(
+                              image:
+                                  AssetImage('assets/images/resize_icon.gif'),
+                              width: 42,
+                              height: 42,
                             ),
-                          ),
-                        ],
-                      ),
+                            SizedBox(width: 14),
+                            Text(
+                              "ROI 설정하기",
+                              style: TextStyle(
+                                  fontSize: 18,
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.w400),
+                            ),
+                          ],
+                        ),
+                        Icon(
+                          CupertinoIcons.forward,
+                          color: Colors.black,
+                        ),
+                      ],
                     ),
                   ),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      CupertinoPageRoute(
+                        builder: (context) => const RoiWidget(),
+                      ),
+                    );
+                  },
                 ),
-              ),
+
               const SizedBox(height: 20),
             ],
           ),
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-}
-
-class RoiPainter extends CustomPainter {
-  final Offset? startPosition;
-  final Offset? currentPosition;
-  final double boxWidth;
-  final double boxHeight;
-
-  RoiPainter(
-      this.startPosition, this.currentPosition, this.boxWidth, this.boxHeight);
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.red.withOpacity(0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
-
-    if (startPosition != null && currentPosition != null) {
-      Rect rect = Rect.fromPoints(startPosition!, currentPosition!);
-      canvas.drawRect(rect, paint);
-    }
-
-    final crossPaint = Paint()
-      ..color = Colors.grey
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-
-    double centerX = boxWidth / 2;
-    double centerY = boxHeight / 2;
-
-    canvas.drawLine(
-        Offset(centerX - 25, 0), Offset(centerX - 25, boxHeight), crossPaint);
-    canvas.drawLine(Offset(0, centerY), Offset(boxWidth, centerY), crossPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return true;
   }
 }
