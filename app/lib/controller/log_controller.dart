@@ -135,10 +135,8 @@ class LogController extends GetxController {
         List<dynamic> fetchedLogs = jsonDecode(response.body);
         List<Map<String, String>> parsedLogs = fetchedLogs.map((dynamic log) {
           return {
-            'user_id': log['user_id'].toString(),
             'timestamp': log['timestamp'].toString(),
             'eventname': log['eventname'].toString(),
-            'camera_number': log['camera_number'].toString(),
           };
         }).toList();
         logs.value = parsedLogs;

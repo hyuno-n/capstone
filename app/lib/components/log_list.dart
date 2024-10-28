@@ -14,7 +14,7 @@ class LogList extends StatelessWidget {
         return ListTile(
           title: Text('Event: ${log['eventname']}'),
           subtitle: Text(
-              'ID: ${log['user_id']} | Time: ${log['timestamp']} | Camera: ${log['camera_number']}'),
+              'ID: ${'user_id'} | Time: ${log['timestamp']} | Camera: ${'camera_number'}'),
         );
       },
     );
