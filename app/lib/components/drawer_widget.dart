@@ -13,6 +13,7 @@ class DrawerWidget extends StatelessWidget {
     final AppController appController = Get.find(); // AppController 찾기
 
     return Drawer(
+      backgroundColor: Colors.white,
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
@@ -23,15 +24,12 @@ class DrawerWidget extends StatelessWidget {
                     AssetImage('assets/images/user_page_profile.jpg'),
                 backgroundColor: Colors.white,
               ),
-              accountName: Text(userController.username.value),
-              accountEmail: const Text('lay_down?@gmail.com'),
-              otherAccountsPictures: const [
-                CircleAvatar(
-                  backgroundImage:
-                      AssetImage('assets/images/user_page_profile.jpg'),
-                  backgroundColor: Colors.white,
-                ),
-              ],
+              accountName: Text(
+                userController.username.value,
+                style: const TextStyle(fontSize: 20),
+              ),
+              accountEmail: const Text(''),
+              otherAccountsPictures: const [],
               decoration: BoxDecoration(
                 color: Colors.red[400],
                 borderRadius: const BorderRadius.only(

@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:app/controller/camera_provider.dart';
+import 'package:app/provider/camera_provider.dart';
 import 'package:app/controller/video_streaming.dart';
 import 'package:provider/provider.dart';
 
