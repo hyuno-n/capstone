@@ -11,3 +11,5 @@ saved_clips/
 video/
 
 video_test.py
+ 
+.env
