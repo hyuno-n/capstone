@@ -8,7 +8,7 @@ from datetime import datetime
 load_dotenv()
 
 def push_message(user_id, eventname, camera_number=1):
-    url = f"http://{os.getenv('FLASK_APP_IP', '127.0.0.1')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
+    url = f"http://{os.getenv('FLASK_APP_IP', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
     headers = {'Content-Type': 'application/json'}
     data = {
         'user_id': user_id,
