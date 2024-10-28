@@ -3,7 +3,7 @@ import 'package:flutter_svg/svg.dart';
 import 'package:app/components/drawer_widget.dart';
 import 'package:app/components/enddrawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
-import 'package:app/controller/camera_provider.dart'; // CameraProvider import 추가
+import 'package:app/provider/camera_provider.dart'; // CameraProvider import 추가
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
 

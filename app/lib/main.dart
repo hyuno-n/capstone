@@ -1,8 +1,9 @@
+import 'package:app/provider/roi_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:get/get.dart';
 import 'package:app/binding/init_binding.dart';
-import 'package:app/controller/camera_provider.dart';
+import 'package:app/provider/camera_provider.dart';
 import 'package:app/pages/login_page.dart';
 import 'package:app/pages/splash_screen.dart';
 import 'package:provider/provider.dart';
@@ -10,10 +11,13 @@ import 'package:provider/provider.dart';
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
   runApp(
-    ChangeNotifierProvider(
-      create: (context) => CameraProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (context) => CameraProvider()),
+        ChangeNotifierProvider(create: (_) => RoiProvider()),
+      ],
       child: const MyApp(),
-    ),  
+    ),
   );
 }
 
