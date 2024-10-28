@@ -27,6 +27,7 @@ class _AiReportState extends State<AiReport> {
 
   Future<void> _loadSwitchStates() async {
     final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
     setState(() {
       isFallDetectionOn = prefs.getBool('fallDetection') ?? false;
       isFireDetectionOn = prefs.getBool('fireDetection') ?? false;
