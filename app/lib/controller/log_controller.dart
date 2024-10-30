@@ -24,6 +24,7 @@ class LogController extends GetxController {
     String timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
     String eventname = data['eventname'] ?? "New Event";
     String cameraNumber = data['camera_number']?.toString() ?? "N/A";
+    String eventUrl = data['event_url'] ?? '';
 
     // 로그 추가
     logs.add({
@@ -31,6 +32,7 @@ class LogController extends GetxController {
       'timestamp': timestamp,
       'eventname': eventname,
       'camera_number': cameraNumber,
+      'event_url': eventUrl,
     });
   }
 
@@ -50,7 +52,8 @@ class LogController extends GetxController {
             'user_id': log['user_id']?.toString() ?? '',
             'timestamp': log['timestamp']?.toString() ?? '',
             'eventname': log['eventname']?.toString() ?? '',
-            'camera_number': log['camera_number']?.toString() ?? ''
+            'camera_number': log['camera_number']?.toString() ?? '',
+            'event_url': log['event_url']?.toString() ?? ''
           };
         }).toList();
       } else {
@@ -81,6 +84,29 @@ class LogController extends GetxController {
       }
     } catch (e) {
       print('Error clearing logs: $e');
+    }
+  }
+
+  Future<void> deleteLog(String userId, String timestamp) async {
+    final String? flaskIp = dotenv.env['FLASK_IP'];
+    final String? flaskPort = dotenv.env['FLASK_PORT'];
+    final String url = 'http://$flaskIp:$flaskPort/delete_log';
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({'user_id': userId, 'timestamp': timestamp}),
+      );
+      if (response.statusCode == 200) {
+        logs.removeWhere(
+            (log) => log['user_id'] == userId && log['timestamp'] == timestamp);
+        print('Log deleted successfully');
+      } else {
+        print('Failed to delete log: ${response.body}');
+      }
+    } catch (e) {
+      print('Error deleting log: $e');
     }
   }
 

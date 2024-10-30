@@ -25,3 +25,4 @@ class EventLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     eventname = db.Column(db.String(50), nullable=False)
     camera_number = db.Column(db.Integer, nullable=False)
+    event_url = db.Column(db.String(255), nullable=True)

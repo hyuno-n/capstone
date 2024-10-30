@@ -71,7 +71,7 @@ class _LogPageState extends State<LogPage> {
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
-                  _logController.clearLogs(); // updateLogs 호출 필요 없음
+                  _logController.clearLogs();
                 },
               ),
             ],

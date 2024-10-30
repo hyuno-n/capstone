@@ -4,17 +4,30 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, EventLog
 from . import db, socketio
 from datetime import datetime
-from dotenv import load_dotenv
 import os
 import requests
 from flask_cors import CORS
-
-load_dotenv()
-
-DL_MODEL_IP = os.getenv("DL_MODEL_IP")
-DL_MODEL_PORT = os.getenv("DL_MODEL_PORT")
+import boto3
 
 bp = Blueprint('main', __name__)
+
+def get_s3_client():
+    return boto3.client(
+        's3',
+        aws_access_key_id = current_app.config['AWS_ACCESS_KEY_ID'],
+        aws_secret_access_key=current_app.config['AWS_SECRET_ACCESS_KEY'],
+        region_name=current_app.config['AWS_REGION']
+    )
+
+def delete_file_from_s3(file_key):
+    s3 = get_s3_client()
+    bucket_name = current_app.config['S3_BUCKET_NAME']
+    print(f"Attempting to delete {file_key} from bucket {bucket_name}")
+    try:
+        s3.delete_object(Bucket=bucket_name, Key=file_key)
+        print(f"Deleted {file_key} from s3 bucket {bucket_name}")
+    except Exception as e:
+        print(f"Falied to delete {file_key} from s3: {e}")
 
 # 홈 엔드포인트
 @bp.route('/')
@@ -72,7 +85,8 @@ def log_event():
     user_id = data.get('user_id')
     timestamp_str = data.get('timestamp')
     eventname = data.get('eventname')
-    camera_number = data.get('camera_number')  # camera_number를 포함시키는 경우
+    camera_number = data.get('camera_number')
+    event_url = data.get('eventurl')
 
     # user_id가 없는 경우 오류 처리
     if not user_id:
@@ -84,7 +98,7 @@ def log_event():
         return jsonify({"error": "Invalid timestamp format"}), 400
 
     # EventLog에 user_id를 포함하여 생성
-    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number)
+    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number,event_url = event_url)
     db.session.add(new_event)
     db.session.commit()
 
@@ -93,7 +107,8 @@ def log_event():
         'user_id': user_id,
         'timestamp': timestamp_str,
         'eventname': eventname,
-        'camera_number':camera_number
+        'camera_number':camera_number,
+        'event_url':event_url
     })
 
     return jsonify({"message": "Event logged"}), 200
@@ -103,7 +118,7 @@ def log_event():
 def get_user_events(user_id):
     events = EventLog.query.filter_by(user_id=user_id).all()
     event_list = [
-        {"user_id": event.user_id, "timestamp": event.timestamp.isoformat(), "eventname": event.eventname, "camera_number": event.camera_number}
+        {"user_id": event.user_id, "timestamp": event.timestamp.isoformat(), "eventname": event.eventname, "camera_number": event.camera_number, "event_url": event.event_url}
         for event in events
     ]
     return jsonify(event_list), 200
@@ -126,11 +141,46 @@ def delete_user_events():
         return jsonify({"error": "Missing user_id"}), 400
 
     user_id = data['user_id']
+    events = EventLog.query.filter_by(user_id=user_id).all()
+
+    for event in events:
+        if event.event_url:
+            file_key = event.event_url.split('/')[-1]
+            delete_file_from_s3(file_key)
+
     EventLog.query.filter_by(user_id=user_id).delete()
     db.session.commit()
 
     return jsonify({"message": "User events deleted"}), 200
 
+@bp.route('/delete_log', methods=['POST'])
+def delete_log():
+    data = request.get_json()
+    if not data or 'user_id' not in data or 'timestamp' not in data:
+        return jsonify({"error": "Missing user_id or timestamp"}), 400
+
+    user_id = data['user_id']
+    timestamp_str = data['timestamp']
+    try:
+        timestamp = datetime.fromisoformat(timestamp_str)
+    except ValueError:
+        return jsonify({"error": "Invalid timestamp format"}), 400
+
+    event = EventLog.query.filter_by(user_id=user_id, timestamp=timestamp).first()
+
+    if event:
+        # S3 파일 삭제
+        if event.event_url:
+            file_key = event.event_url.split('/')[-1]
+            delete_file_from_s3(file_key)
+
+        # 데이터베이스에서 로그 삭제
+        db.session.delete(event)
+        db.session.commit()
+        return jsonify({"message": "Log deleted"}), 200
+    else:
+        return jsonify({"error": "Log not found"}), 404
+    
 # logs 엔드포인트
 @bp.route('/logs', methods=['GET'])
 def get_logs():
@@ -157,7 +207,9 @@ def receive_event():
     movement_detection = data.get('movement_detection', False)
     user_id = data.get('user_id', 'Unknown')
 
-    model_server_url = f"http://{DL_MODEL_IP}:{DL_MODEL_PORT}/event_update"
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/event_update"
     payload = {
         'fall_detection_on': fall_detection,
         'fire_detection_on': fire_detection,
@@ -176,3 +228,39 @@ def receive_event():
         print("오류 발생:", e)
 
     return jsonify({"message": "Event transmitted successfully"}), 200
+
+@bp.route('/get_event_url', methods=['POST'])
+def get_event_url():
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data received"}), 400
+
+    user_id = data.get('user_id')
+    eventname = data.get('eventname')
+    timestamp_str = data.get('timestamp')
+    camera_number = data.get('camera_number')
+
+    # 필요한 정보가 누락된 경우 오류 반환
+    if not user_id or not eventname or not timestamp_str or camera_number is None:
+        return jsonify({"error": "Missing required fields"}), 400
+
+    # 타임스탬프 형식을 확인하고 변환
+    try:
+        timestamp = datetime.fromisoformat(timestamp_str)
+    except ValueError:
+        return jsonify({"error": "Invalid timestamp format"}), 400
+
+    # 조건에 맞는 이벤트 로그 검색
+    event = EventLog.query.filter_by(
+        user_id=user_id,
+        eventname=eventname,
+        timestamp=timestamp,
+        camera_number=camera_number
+    ).first()
+
+    # 이벤트가 없는 경우 처리
+    if not event or not event.event_url:
+        return jsonify({"error": "Event not found or URL not available"}), 404
+
+    # 이벤트 URL 반환
+    return jsonify({"event_url": event.event_url}), 200
