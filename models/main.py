@@ -8,11 +8,27 @@ from collections import defaultdict, deque
 from flask import Flask, request, jsonify
 import threading
 from dotenv import load_dotenv
+import boto3
+import requests
+from concurrent.futures import ThreadPoolExecutor
+
+# 스레드 풀 생성
+executor = ThreadPoolExecutor(max_workers=2)  
+
+# 배경 제거
+bg_subtractor = cv2.createBackgroundSubtractorMOG2()
 
 # Flask 서버 설정
 load_dotenv()
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your_secret_key'
+
+# AWS S3 설정
+AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION_NAME = os.getenv("AWS_REGION_NAME")
+S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
+S3_FOLDER_NAME = "saved_clips"
 
 # 전역 상수 정의
 CONFIDENCE_THRESHOLD = 0.6
@@ -22,6 +38,7 @@ WHITE = (255, 255, 255)
 # LSTM 모델 및 YOLO 모델 불러오기
 lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
 yolo_model = YOLO("model/yolo11s-pose.pt")
+fire_detect_model = YOLO("model/yolo11n-fire.pt")
 
 # 클래스 레이블 설정
 classes = ['Fall', 'Normal']
@@ -60,7 +77,6 @@ roi_x1 = 0
 roi_y1 = 0
 roi_x2 = 1920
 roi_y2 = 1080
-
 
 def detect_people_and_keypoints(frame):
     """주어진 프레임에서 사람 및 키포인트 탐지"""
@@ -110,13 +126,30 @@ def draw_skeletons_and_boxes(frame, keypoints_list, boxes):
     
     return frame
 
+def create_s3():
+    try:
+        s3_client = boto3.client(
+        service_name = 's3',
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION_NAME
+        )
+        print("S3 클라이언트 생성 성공")
+        return s3_client
+    except Exception as e:
+        print(f"S3 클라이언트 생성 중 오류 발생: {e}")
+        return None
+
 def save_event_clip(event_name, frame):
     """이벤트가 발생하면 영상을 저장하는 함수"""
-    global out
+    global out, frames_after_event, local_filepath, s3_key
+    
     if out is None:
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        clip_filename = os.path.join(output_dir, f"{event_name}_{timestamp}.mp4")
-        out = cv2.VideoWriter(clip_filename, fourcc, fps, (frame_width, frame_height))
+        clip_filename = f"{event_name}_{timestamp}.mp4"
+        local_filepath = os.path.join(output_dir, clip_filename)
+        s3_key = f"{S3_FOLDER_NAME}/{clip_filename}"
+        out = cv2.VideoWriter(local_filepath, fourcc, fps, (frame_width, frame_height))   
 
         buffer_size = len(pre_event_buffer)
         if buffer_size > 0:
@@ -127,11 +160,39 @@ def save_event_clip(event_name, frame):
             print("이벤트 발생 전 저장할 프레임이 충분하지 않습니다.")
     
     out.write(frame)
+    frames_after_event += 1
+
+    # 이벤트 후 클립 저장이 완료되면 S3에 업로드
+    if frames_after_event >= post_event_length:
+        out.release()
+        out = None
+        print("이벤트 클립 저장 완료.")
+        
+        # 클립 파일을 S3에 업로드
+        future = executor.submit(upload_to_s3, local_filepath, S3_BUCKET_NAME, s3_key)  # S3 업로드를 백그라운드 스레드로 수행
+        try:
+            future.result()  # 업로드 완료를 대기
+        except Exception as e:
+            print(f"S3 업로드 중 오류 발생: {e}")
+
+        # 로컬 파일 삭제
+        if os.path.exists(local_filepath):
+            os.remove(local_filepath)
+            print(f"로컬 파일 삭제: {local_filepath}")
+
+def upload_to_s3(local_filepath, s3_bucket_name, s3_key):
+    try:
+        s3_client = create_s3()
+        s3_client = boto3.client('s3')
+        s3_client.upload_file(local_filepath, s3_bucket_name, s3_key)
+        print(f"S3에 {local_filepath} 업로드 성공: {s3_key}")
+    except Exception as e:
+        print(f"S3 업로드 중 오류 발생: {e}")
 
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
-    if predicted_label in ['Fall', 'Movement'] and not event_detected:
+    if predicted_label in ['Fall', 'Movement','Black_smoke','Gray_smoke','White_smoke','Fire'] and not event_detected:
         event_detected = True
         frames_after_event = 0
         print(f"{predicted_label} detected!")
@@ -139,17 +200,12 @@ def handle_event_detection(frame, predicted_label):
     
     if event_detected:
         pre_event_buffer.append(frame)
-        # save_event_clip(predicted_label, frame)
-        frames_after_event += 1
-
+        save_event_clip(predicted_label, frame)
         if frames_after_event >= post_event_length:
             event_detected = False
-            out.release()
-            out = None
-            print("이벤트 클립 저장 완료.")
 
 def detect_movement(frame, min_contour_area = 10000):
-    bg_subtractor = cv2.createBackgroundSubtractorMOG2()
+    """영상처리를 이용한 움직임 감지"""
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, None, iterations=2)
@@ -160,9 +216,8 @@ def detect_movement(frame, min_contour_area = 10000):
         area = cv2.contourArea(contour)
         if area > min_contour_area:
             x, y, w, h = cv2.boundingRect(contour)
-            if (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2):
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                motion_detected = True
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            motion_detected = True
             
     return frame, motion_detected
 
@@ -175,11 +230,13 @@ def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
     
 @app.route('/event_update', methods=['POST'])
+
 def event_update():
     """서버에서 탐지 기능 상태 가져오기"""
     global fall_detection_on
     global movement_detection_on
-    
+    global fire_detection_on
+
     try:
         # request.get_json() 사용하여 POST 요청의 JSON 데이터 가져오기
         data = request.get_json()
@@ -189,33 +246,35 @@ def event_update():
         # JSON 데이터에서 fall_detection과 movement_detection 값을 가져오기
         fall_detection_on = data.get('fall_detection_on', False)
         movement_detection_on = data.get('movement_detection_on', False)
+        fire_detection_on = data.get('fire_detection_on', False)
 
         # 상태를 확인하기 위해서 로그 출력
-        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}")
+        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}, Fire detection: {fire_detection_on}")
 
         # 성공적인 응답 반환
-        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on}), 200
+        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on,"fire_detection":fire_detection_on}), 200
 
     except Exception as e:
         print(f"서버 통신 중 오류 발생: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-
 def send_alert(event_name):
     """이벤트 발생 시 알림을 보내는 함수"""
     print(f"경고: {event_name} 발생! 알림 전송 중...")
     
-    url = f"http://{os.getenv('flask_app_ip/', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '8000')}/log_event"
+    url = f"http://{os.getenv('FLASK_APP_IP', '127.0.0.1')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
 
     timestamp = datetime.datetime.now().isoformat()
     
     payload = {
+        'user_id': "qkreogus",
         'timestamp': timestamp,
-        'eventname': event_name
+        'eventname': event_name,
+        'camera_number' : 1
     }
     
     try:
-        response = request.post(url, json=payload)
+        response = requests.post(url, headers = {'Content-Type': 'application/json'} ,json= payload)
         if response.status_code == 200:
             print("서버에 신호 전송 완료.")
         else:
@@ -228,10 +287,12 @@ def process_video():
     global frames_after_event
     global fall_detection_on 
     global movement_detection_on  
+    global fire_detection_on  
     global roi_apply_signal  
 
     fall_detection_on = False  
     movement_detection_on = False
+    fire_detection_on = False
     roi_apply_signal = False  
 
     while cap.isOpened():
@@ -275,12 +336,40 @@ def process_video():
                         cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
                     if track_id in object_predictions:
                         cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+        
         # 움직임 감지              
         if movement_detection_on:
             frame, motion_detected = detect_movement(frame)
             if motion_detected:
                 handle_event_detection(frame, 'Movement')
-            
+        
+        # 화재 감지
+        if fire_detection_on:
+            fire_predictions=fire_detect_model.predict(source=frame, stream=True)
+            fire_detected_in_roi = False
+            for fire_predictions.boxes in fire_predictions:
+                for box in fire_predictions.boxes:
+                    # 바운딩 박스 좌표 추출
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    
+                    # 클래스 이름과 점수 가져오기
+                    class_id = int(box.cls[0])
+                    class_name = fire_detect_model.names[class_id]
+                    score = box.conf[0]
+
+                     # ROI 내에 바운딩 박스가 완전히 포함되는지 확인
+                    if (roi_x1 <= x1 <= roi_x2 and roi_x1 <= x2 <= roi_x2 and
+                        roi_y1 <= y1 <= roi_y2 and roi_y1 <= y2 <= roi_y2):
+                        fire_detected_in_roi = True  # ROI 내에서 감지됨
+                        break 
+
+            if fire_detected_in_roi:
+                handle_event_detection(frame, class_name)
+                # 바운딩 박스와 클래스 이름 및 점수 표시
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                label = f"{class_name}: {score:.2f}"
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+
         if out:
             out.write(frame)
         

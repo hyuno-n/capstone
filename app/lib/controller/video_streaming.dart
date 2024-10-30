@@ -8,15 +8,15 @@ class Streaming extends StatefulWidget {
   final bool showVolumeSlider;
   final String rtspUrl;
   final String cameraName;
-  final VoidCallback onVolumeToggle; // Volume toggle 콜백 추가
-  final VoidCallback onDelete; // 삭제 콜백 추가
+  final VoidCallback? onVolumeToggle; // Volume toggle 콜백 추가
+  final VoidCallback? onDelete; // 삭제 콜백 추가
 
   const Streaming({
     required this.showVolumeSlider,
     required this.rtspUrl,
     required this.cameraName,
-    required this.onVolumeToggle, // 콜백 추가
-    required this.onDelete, // 삭제 콜백 추가
+    this.onVolumeToggle, // 콜백 추가
+    this.onDelete, // 삭제 콜백 추가
     super.key,
   });
 
@@ -71,7 +71,9 @@ class _StreamingState extends State<Streaming> {
             CupertinoDialogAction(
               child: const Text("삭제"),
               onPressed: () {
-                widget.onDelete(); // 삭제 콜백 호출
+                if (widget.onDelete != null) {
+                  widget.onDelete!(); // 안전하게 호출
+                }
                 Navigator.pop(context);
               },
             ),
