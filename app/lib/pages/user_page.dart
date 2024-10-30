@@ -121,7 +121,7 @@ class User_page extends StatelessWidget {
                             style: TextStyle(fontSize: 14, color: Colors.black),
                           ),
                           const Text(
-                            '0',
+                            '4',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,

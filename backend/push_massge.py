@@ -9,7 +9,6 @@ load_dotenv()
 
 def push_message(user_id, eventname, camera_number=1):
     url = f"http://{os.getenv('FLASK_APP_IP', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
-    headers = {'Content-Type': 'application/json'}
     data = {
         'user_id': user_id,
         'timestamp': datetime.now().isoformat(),
@@ -17,7 +16,7 @@ def push_message(user_id, eventname, camera_number=1):
         'camera_number': camera_number
     }
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+    response = requests.post(url, json=data)
 
     if response.status_code == 200:
         print('Event logged successfully:', response.json())

@@ -52,9 +52,6 @@ class _LoginState extends State<Login> {
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
         logController.setCurrentUserId(_usernameController.text);
-        logController.connectToSocket(() {
-          setState(() {});
-        });
         logController.fetchLogs(
             _usernameController.text); // Fetch logs after setting user ID
         Navigator.pushReplacement(
@@ -138,7 +135,6 @@ class _LoginState extends State<Login> {
                         style: TextStyle(fontSize: 15),
                       ),
                     ),
-                    // 새로운 버튼 추가
                     const SizedBox(height: 7),
                     TextButton(
                       onPressed: () {
