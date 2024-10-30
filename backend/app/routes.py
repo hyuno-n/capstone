@@ -11,17 +11,10 @@ from flask_cors import CORS
 
 load_dotenv()
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = os.getenv("SECRET_KEY", "your_secret_key")
-socketio = SocketIO(app, cors_allowed_origins="*")
-
 DL_MODEL_IP = os.getenv("DL_MODEL_IP")
 DL_MODEL_PORT = os.getenv("DL_MODEL_PORT")
 
 bp = Blueprint('main', __name__)
-CORS(app)
-
-app.register_blueprint(bp, url_prefix='/')  # Blueprint 등록
 
 # 홈 엔드포인트
 @bp.route('/')
@@ -100,10 +93,8 @@ def log_event():
         'user_id': user_id,
         'timestamp': timestamp_str,
         'eventname': eventname,
-        'camera_number':camera_number,
-    },)
-
-    current_app.logger.info("Emitted push_message event to Socket.IO clients")
+        'camera_number':camera_number
+    })
 
     return jsonify({"message": "Event logged"}), 200
 
@@ -185,6 +176,3 @@ def receive_event():
         print("오류 발생:", e)
 
     return jsonify({"message": "Event transmitted successfully"}), 200
-
-if __name__ == '__main__':
-    socketio.run(app, host=os.getenv("FLASK_APP_IP", "0.0.0.0"), port=int(os.getenv("FLASK_APP_PORT", 8080)))

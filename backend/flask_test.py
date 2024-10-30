@@ -9,4 +9,4 @@ if __name__ == '__main__':
     from flask_migrate import upgrade
     app.app_context().push()
     upgrade()
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000,debug=True)

@@ -3,12 +3,15 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_socketio import SocketIO
 from flasgger import Swagger, LazyString, LazyJSONEncoder
+from dotenv import load_dotenv
+import os
 
 db = SQLAlchemy()
 migrate = Migrate()
-socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet',logger=True,engineio_logger=True)
 
 def create_app():
+    load_dotenv()
     app = Flask(__name__)
     app.config.from_object('config.DevelopmentConfig')
 

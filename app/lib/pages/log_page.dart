@@ -20,42 +20,30 @@ class _LogPageState extends State<LogPage> {
   @override
   void initState() {
     super.initState();
-    _logController.initializeNotifications();
-    _logController.connectToSocket(updateLogs);
     _logController.fetchLogs(_userController.username.value);
-  }
-
-  void updateLogs() {
-    setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _logController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // 배경색을 흰색으로 설정
+      backgroundColor: Colors.white,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56.0), // AppBar 기본 높이
+        preferredSize: const Size.fromHeight(56.0),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white, // AppBar 배경을 흰색으로 설정
+            color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                spreadRadius: 1, // 그림자의 퍼짐 정도
-                blurRadius: 5, // 그림자 흐림 정도
-                offset: const Offset(0, 2), // 그림자 위치 (아래쪽으로 약간)
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 1,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: AppBar(
-            elevation: 0, // 기본 elevation 제거
-            backgroundColor: Colors.transparent, // 투명 배경 설정
+            elevation: 0,
+            backgroundColor: Colors.transparent,
             title: const Text(
               'Log check',
               style: TextStyle(fontSize: 15),
@@ -83,8 +71,7 @@ class _LogPageState extends State<LogPage> {
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
-                  _logController.clearLogs();
-                  updateLogs();
+                  _logController.clearLogs(); // updateLogs 호출 필요 없음
                 },
               ),
             ],

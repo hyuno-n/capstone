@@ -1,30 +1,21 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-class NotificationService {
+class NotificationManager {
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  NotificationService() {
-    _initializeNotifications();
+  NotificationManager() {
+    initializeNotifications();
   }
 
-  void _initializeNotifications() {
+  void initializeNotifications() {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const InitializationSettings initializationSettings =
-        InitializationSettings(
-      android: initializationSettingsAndroid,
-    );
+        InitializationSettings(android: initializationSettingsAndroid);
 
-    flutterLocalNotificationsPlugin.initialize(
-      initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        if (response.payload != null) {
-          // Handle notification tapped logic here
-        }
-      },
-    );
+    flutterLocalNotificationsPlugin.initialize(initializationSettings);
   }
 
   Future<void> showNotification(String title, String body) async {
@@ -38,12 +29,12 @@ class NotificationService {
     );
     const NotificationDetails platformChannelSpecifics =
         NotificationDetails(android: androidPlatformChannelSpecifics);
+
     await flutterLocalNotificationsPlugin.show(
       0,
       title,
       body,
       platformChannelSpecifics,
-      payload: 'item x',
     );
   }
 }
