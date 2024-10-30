@@ -52,8 +52,10 @@ class _LoginState extends State<Login> {
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
         logController.setCurrentUserId(_usernameController.text);
-        logController.fetchLogs(
-            _usernameController.text); // Fetch logs after setting user ID
+        logController.fetchLogs(_usernameController.text);
+
+        logController.connectSocket();
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const App()),

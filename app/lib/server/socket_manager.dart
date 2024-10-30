@@ -24,7 +24,6 @@ class SocketManager {
     }
 
     final String serverUrl = 'http://$flaskIp:$flaskPort';
-    print("Attempting to connect to $serverUrl");
 
     socket = IO.io(serverUrl, <String, dynamic>{
       'transports': ['websocket'],

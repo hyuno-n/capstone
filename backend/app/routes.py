@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, Flask
 from flask_socketio import emit, SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User, EventLog
+from .models import User, EventLog, Camera
 from . import db, socketio
 from datetime import datetime
 import os
@@ -229,38 +229,43 @@ def receive_event():
 
     return jsonify({"message": "Event transmitted successfully"}), 200
 
-@bp.route('/get_event_url', methods=['POST'])
-def get_event_url():
+# 카메라 추가 엔드포인트
+@bp.route('/add_camera', methods=['POST'])
+def add_camera():
     data = request.get_json()
-    if not data:
-        return jsonify({"error": "No data received"}), 400
+    if not data or 'user_id' not in data or 'rtsp_url' not in data:
+        return jsonify({"error": "Missing user_id or rtsp_url"}), 400
 
-    user_id = data.get('user_id')
-    eventname = data.get('eventname')
-    timestamp_str = data.get('timestamp')
-    camera_number = data.get('camera_number')
+    user_id = data['user_id']
+    rtsp_url = data['rtsp_url']
 
-    # 필요한 정보가 누락된 경우 오류 반환
-    if not user_id or not eventname or not timestamp_str or camera_number is None:
-        return jsonify({"error": "Missing required fields"}), 400
+    # 카메라 번호 할당
+    last_camera = Camera.query.filter_by(user_id=user_id).order_by(Camera.camera_number.desc()).first()
+    camera_number = 1 if not last_camera else last_camera.camera_number + 1
 
-    # 타임스탬프 형식을 확인하고 변환
-    try:
-        timestamp = datetime.fromisoformat(timestamp_str)
-    except ValueError:
-        return jsonify({"error": "Invalid timestamp format"}), 400
+    new_camera = Camera(user_id=user_id, camera_number=camera_number, rtsp_url=rtsp_url)
+    db.session.add(new_camera)
+    db.session.commit()
 
-    # 조건에 맞는 이벤트 로그 검색
-    event = EventLog.query.filter_by(
-        user_id=user_id,
-        eventname=eventname,
-        timestamp=timestamp,
-        camera_number=camera_number
-    ).first()
+    return jsonify({"message": "Camera added", "camera_number": camera_number}), 200
 
-    # 이벤트가 없는 경우 처리
-    if not event or not event.event_url:
-        return jsonify({"error": "Event not found or URL not available"}), 404
+# 카메라 삭제 엔드포인트
+@bp.route('/delete_camera/<int:camera_number>', methods=['DELETE'])
+def delete_camera(camera_number):
+    camera = Camera.query.filter_by(camera_number=camera_number).first()
+    if not camera:
+        return jsonify({"error": "Camera not found"}), 404
 
-    # 이벤트 URL 반환
-    return jsonify({"event_url": event.event_url}), 200
+    user_id = camera.user_id
+
+    # 삭제
+    db.session.delete(camera)
+    db.session.commit()
+
+    # 카메라 번호 재정렬
+    cameras = Camera.query.filter_by(user_id=user_id).order_by(Camera.camera_number).all()
+    for i, cam in enumerate(cameras):
+        cam.camera_number = i + 1
+    db.session.commit()
+
+    return jsonify({"message": "Camera deleted and numbers reordered"}), 200

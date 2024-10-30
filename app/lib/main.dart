@@ -8,7 +8,6 @@ import 'package:app/pages/login_page.dart';
 import 'package:app/pages/splash_screen.dart';
 import 'package:provider/provider.dart';
 
-
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
   runApp(

@@ -15,6 +15,9 @@ class LogController extends GetxController {
   void onInit() {
     super.onInit();
     notificationManager = NotificationManager();
+  }
+
+  void connectSocket() {
     socketManager = SocketManager(notificationManager, this);
     socketManager.connectToSocket();
   }

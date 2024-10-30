@@ -15,8 +15,8 @@ class Streaming extends StatefulWidget {
     required this.showVolumeSlider,
     required this.rtspUrl,
     required this.cameraName,
-    this.onVolumeToggle, // 콜백 추가
-    this.onDelete, // 삭제 콜백 추가
+    this.onVolumeToggle,
+    this.onDelete,
     super.key,
   });
 

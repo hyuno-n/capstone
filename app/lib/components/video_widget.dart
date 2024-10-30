@@ -1,9 +1,11 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/camera_provider.dart';
-import 'package:app/controller/video_streaming.dart';
+import 'package:get/get.dart';
 import 'package:provider/provider.dart';
+import 'package:app/controller/video_streaming.dart';
 
 class VideoWidget extends StatefulWidget {
   const VideoWidget({super.key});
@@ -49,8 +51,13 @@ class _VideoWidgetState extends State<VideoWidget> {
               child: const Text("적용"),
               onPressed: () {
                 if (_textEditingController.text.isNotEmpty) {
+                  // 현재 로그인한 user_id 가져오기
+                  String userId = Get.find<UserController>().getUserId;
+
+                  // 카메라 추가
                   Provider.of<CameraProvider>(context, listen: false)
-                      .addCamera(_textEditingController.text);
+                      .addCamera(_textEditingController.text, userId);
+
                   _textEditingController.clear();
                 }
                 Navigator.pop(context);

@@ -26,3 +26,12 @@ class EventLog(db.Model):
     eventname = db.Column(db.String(50), nullable=False)
     camera_number = db.Column(db.Integer, nullable=False)
     event_url = db.Column(db.String(255), nullable=True)
+
+class Camera(db.Model):
+    __tablename__ = 'cameras'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    camera_number = db.Column(db.Integer, nullable=False)
+    rtsp_url = db.Column(db.String(255), nullable=False)
+
+    user = db.relationship('User', backref='cameras', lazy=True)
