@@ -220,9 +220,9 @@ def receive_event():
     try:
         response = requests.post(model_server_url, json=payload, timeout=10)
         if response.status_code == 200:
-            print("서버에 신호 전송 완료.")
+            print("모델에 신호 전송 완료.")
         else:
-            print("서버 신호 전송 실패:", response.status_code)
+            print("모델 신호 전송 실패:", response.status_code)
         
     except requests.exceptions.RequestException as e:
         print("오류 발생:", e)
