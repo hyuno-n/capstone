@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/ai_report.dart';
 import 'package:app/components/drawer_widget.dart';
-import 'package:app/components/enddrawer_widget.dart';
 
 // Ai report 페이지 App에서 -> 이 페이지로 넘겨옴 <Ai report main page>
 
@@ -43,23 +42,10 @@ class AiReportPage extends StatelessWidget {
                 },
               ),
             ),
-            actions: [
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: SvgPicture.asset("assets/svg/icons/alarm_upbar.svg"),
-                    onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                  );
-                },
-              ),
-            ],
           ),
         ),
       ),
       drawer: const DrawerWidget(),
-      endDrawer: const EndDrawerWidget(),
       body: const Center(
         child: AiReport(),
       ),

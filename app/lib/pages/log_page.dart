@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/components/log_list.dart';
 import 'package:app/components/drawer_widget.dart';
-import 'package:app/components/enddrawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
 
 class LogPage extends StatefulWidget {
@@ -45,7 +44,7 @@ class _LogPageState extends State<LogPage> {
             elevation: 0,
             backgroundColor: Colors.transparent,
             title: const Text(
-              'Log check',
+              'Log',
               style: TextStyle(fontSize: 15),
             ),
             centerTitle: true,
@@ -58,16 +57,6 @@ class _LogPageState extends State<LogPage> {
               ),
             ),
             actions: [
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: const Icon(Icons.notifications),
-                    onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                  );
-                },
-              ),
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: () {
@@ -79,7 +68,6 @@ class _LogPageState extends State<LogPage> {
         ),
       ),
       drawer: const DrawerWidget(),
-      endDrawer: const EndDrawerWidget(),
       body: Obx(() {
         if (_logController.logs.isEmpty) {
           return const Center(child: Text('No logs available'));

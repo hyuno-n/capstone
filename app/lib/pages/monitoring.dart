@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/drawer_widget.dart';
-import 'package:app/components/enddrawer_widget.dart';
 import 'package:app/components/video_widget.dart';
 
 class Monitoring extends StatelessWidget {
@@ -41,23 +40,10 @@ class Monitoring extends StatelessWidget {
                 },
               ),
             ),
-            actions: [
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: SvgPicture.asset("assets/svg/icons/alarm_upbar.svg"),
-                    onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                  );
-                },
-              ),
-            ],
           ),
         ),
       ),
       drawer: const DrawerWidget(),
-      endDrawer: const EndDrawerWidget(),
       body: const Center(
         child: VideoWidget(),
       ),

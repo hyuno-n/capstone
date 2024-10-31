@@ -2,7 +2,6 @@ import 'package:app/controller/log_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:app/components/drawer_widget.dart';
-import 'package:app/components/enddrawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/camera_provider.dart'; // CameraProvider import 추가
 import 'package:get/get.dart';
@@ -50,23 +49,10 @@ class User_page extends StatelessWidget {
                 },
               ),
             ),
-            actions: [
-              Builder(
-                builder: (context) {
-                  return IconButton(
-                    icon: SvgPicture.asset("assets/svg/icons/alarm_upbar.svg"),
-                    onPressed: () {
-                      Scaffold.of(context).openEndDrawer();
-                    },
-                  );
-                },
-              ),
-            ],
           ),
         ),
       ),
       drawer: const DrawerWidget(),
-      endDrawer: const EndDrawerWidget(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
