@@ -24,7 +24,6 @@ class App extends GetView<AppController> {
           case RouteName.User_page:
             return const User_page();
         }
-        return Container(); // 기본적으로 빈 컨테이너를 반환
       }),
       bottomNavigationBar: Obx(
         () => Container(

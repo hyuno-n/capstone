@@ -39,7 +39,6 @@ class CameraProvider extends ChangeNotifier {
   void deleteCamera(int index) {
     if (index >= 0 && index < _rtspUrls.length) {
       // 서버에 카메라 삭제 요청
-      String rtspUrl = _rtspUrls[index];
       deleteCameraFromDatabase(index + 1);
       _rtspUrls.removeAt(index);
       notifyListeners();

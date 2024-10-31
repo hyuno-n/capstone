@@ -12,7 +12,7 @@ class SocketManager {
 
   SocketManager(this.notificationManager, this.logController);
 
-  void connectToSocket() {
+  void connectToSocket(String currentUserId) {
     if (isConnected) return;
 
     final String? flaskIp = dotenv.env['FLASK_IP'];
@@ -37,21 +37,25 @@ class SocketManager {
     });
 
     socket.on('push_message', (data) {
-      logController.handleIncomingMessage(data);
       String userId = data['user_id'] ?? "Unknown User";
-      String timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
-      DateTime dateTime = DateTime.parse(timestamp);
-      String formattedTimestamp =
-          DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
 
-      String eventname = data['eventname'] ?? "New Event";
-      String cameraNumber = data['camera_number']?.toString() ?? "N/A";
+      if (userId == currentUserId) {
+        logController.handleIncomingMessage(data);
+        String timestamp =
+            data['timestamp'] ?? DateTime.now().toIso8601String();
+        DateTime dateTime = DateTime.parse(timestamp);
+        String formattedTimestamp =
+            DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
 
-      String title = "$eventname 발생!";
-      String message = "camera_number: $cameraNumber at $formattedTimestamp";
+        String eventname = data['eventname'] ?? "New Event";
+        String cameraNumber = data['camera_number']?.toString() ?? "N/A";
 
-      notificationManager.showNotification(title, message);
-      logController.fetchLogs(userId);
+        String title = "$eventname 발생!";
+        String message = "camera_number: $cameraNumber at $formattedTimestamp";
+
+        notificationManager.showNotification(title, message);
+        logController.fetchLogs(userId);
+      }
     });
 
     socket.onDisconnect((_) {

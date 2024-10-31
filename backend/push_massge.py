@@ -7,13 +7,14 @@ from datetime import datetime
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
-def push_message(user_id, eventname, camera_number=1):
+def push_message():
     url = f"http://{os.getenv('FLASK_APP_IP', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
     data = {
-        'user_id': user_id,
+        'user_id': 'rkdtjdgus',
         'timestamp': datetime.now().isoformat(),
-        'eventname': eventname,
-        'camera_number': camera_number
+        'eventname': 'fall',
+        'camera_number': 1,
+        'eventurl' : 'http://asdq.dcomasd'
     }
 
     response = requests.post(url, json=data)
@@ -24,7 +25,4 @@ def push_message(user_id, eventname, camera_number=1):
         print('Failed to log event:', response.text)
 
 if __name__ == '__main__':
-    user_id = input("Enter the User ID: ")  # User ID를 문자열로 받습니다.
-    eventname = input("Enter the event name: ")
-    camera_number = input("Enter the camera number: ")
-    push_message(user_id, eventname, int(camera_number))
+    push_message()

@@ -19,7 +19,7 @@ class LogController extends GetxController {
 
   void connectSocket() {
     socketManager = SocketManager(notificationManager, this);
-    socketManager.connectToSocket();
+    socketManager.connectToSocket(currentUserId);
   }
 
   void handleIncomingMessage(Map<String, dynamic> data) {
