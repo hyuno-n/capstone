@@ -37,26 +37,29 @@ class _RoiControllerState extends State<RoiController> {
   void _onPanEnd(DragEndDetails details) {
     setState(() {
       if (startPosition != null && currentPosition != null) {
-        roiRect = Rect.fromPoints(startPosition!, currentPosition!);
+        // startPosition과 currentPosition 좌표를 정수로 반올림
+        final roundedStartPosition = Offset(
+          startPosition!.dx.toInt().toDouble(),
+          startPosition!.dy.toInt().toDouble(),
+        );
+        final roundedCurrentPosition = Offset(
+          currentPosition!.dx.toInt().toDouble(),
+          currentPosition!.dy.toInt().toDouble(),
+        );
 
-        // 1920x1080 해상도로 변환
+        roiRect = Rect.fromPoints(roundedStartPosition, roundedCurrentPosition);
+
+        // 1920x1080 해상도로 변환 후 정수로 변환
         final convertedRoiRect = Rect.fromLTRB(
-          roiRect!.left / widget.boxWidth * 1920,
-          roiRect!.top / widget.boxHeight * 1080,
-          roiRect!.right / widget.boxWidth * 1920,
-          roiRect!.bottom / widget.boxHeight * 1080,
+          (roiRect!.left / widget.boxWidth * 1920).toInt().toDouble(),
+          (roiRect!.top / widget.boxHeight * 1080).toInt().toDouble(),
+          (roiRect!.right / widget.boxWidth * 1920).toInt().toDouble(),
+          (roiRect!.bottom / widget.boxHeight * 1080).toInt().toDouble(),
         );
 
         widget.onRoiUpdated(convertedRoiRect); // 변환된 좌표로 콜백 호출
       }
     });
-
-    if (roiRect != null) {
-      print(
-          'Original ROI 좌표: (${roiRect!.left}, ${roiRect!.top}, ${roiRect!.right}, ${roiRect!.bottom})');
-      print(
-          '1920x1080 변환된 ROI 좌표: (${roiRect!.left / widget.boxWidth * 1920}, ${roiRect!.top / widget.boxHeight * 1080}, ${roiRect!.right / widget.boxWidth * 1920}, ${roiRect!.bottom / widget.boxHeight * 1080})');
-    }
   }
 
   Offset _getLimitedPosition(Offset position) {

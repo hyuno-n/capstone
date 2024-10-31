@@ -131,11 +131,15 @@ class _AiReportState extends State<AiReport> {
   }
 
   void _updateAllDetectionStates() {
+    final roiProvider = Provider.of<RoiProvider>(context, listen: false);
+    final roiValues = roiProvider.getRoiValues(); // ROI 값을 가져옴
+
     sendEventToFlask(
       isFallDetectionOn,
       isFireDetectionOn,
       isMovementDetectionOn,
       'user123',
+      roiValues,
     );
   }
 

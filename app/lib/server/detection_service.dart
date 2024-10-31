@@ -2,8 +2,13 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-Future<void> sendEventToFlask(bool fall_detection_on, bool fire_detection_on,
-    bool movement_detection_on, String userId) async {
+Future<void> sendEventToFlask(
+  bool fall_detection_on,
+  bool fire_detection_on,
+  bool movement_detection_on,
+  String userId,
+  Map<String, dynamic> roiValues,
+) async {
   final String? flaskAppIp = dotenv.env['FLASK_IP'];
   final String? flaskAppPort = dotenv.env['FLASK_PORT'];
   final String flaskUrl = 'http://$flaskAppIp:$flaskAppPort/receive_event';
@@ -19,6 +24,7 @@ Future<void> sendEventToFlask(bool fall_detection_on, bool fire_detection_on,
         'fire_detection': fire_detection_on,
         'movement_detection': movement_detection_on,
         'user_id': userId,
+        'roi_values': roiValues,
       }),
     );
 

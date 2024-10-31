@@ -86,19 +86,22 @@ def log_event():
     timestamp_str = data.get('timestamp')
     eventname = data.get('eventname')
     camera_number = data.get('camera_number')
-    event_url = data.get('eventurl')
+    
+    bucket_name = current_app.config['S3_BUCKET_NAME']
+    region_name = current_app.config['AWS_REGION']
+
+    formatted_timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d_%H%M%S')
+    key_name = f"saved_clips/{eventname}_{formatted_timestamp}.mp4"
+
+    # 최종 URL 생성
+    event_url = f"https://{bucket_name}.s3.{region_name}.amazonaws.com/{key_name}"
 
     # user_id가 없는 경우 오류 처리
     if not user_id:
         return jsonify({"error": "Missing user_id"}), 400
 
-    try:
-        timestamp = datetime.fromisoformat(timestamp_str)
-    except ValueError:
-        return jsonify({"error": "Invalid timestamp format"}), 400
-
     # EventLog에 user_id를 포함하여 생성
-    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number,event_url = event_url)
+    new_event = EventLog(user_id=user_id, timestamp=timestamp_str, eventname=eventname, camera_number=camera_number,event_url = event_url)
     db.session.add(new_event)
     db.session.commit()
 
@@ -207,6 +210,7 @@ def receive_event():
     movement_detection = data.get('movement_detection', False)
     user_id = data.get('user_id', 'Unknown')
 
+    roi_values = data.get('roi_values',{})
     dl_model_ip = current_app.config['DL_MODEL_IP']
     dl_model_port = current_app.config['DL_MODEL_PORT']
     model_server_url = f"http://{dl_model_ip}:{dl_model_port}/event_update"
@@ -214,7 +218,8 @@ def receive_event():
         'fall_detection_on': fall_detection,
         'fire_detection_on': fire_detection,
         'movement_detection_on': movement_detection,
-        'user_id': user_id
+        'user_id': user_id,
+        'roi_values' : roi_values,
     }
     
     try:
