@@ -247,6 +247,24 @@ def add_camera():
     db.session.add(new_camera)
     db.session.commit()
 
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/add_camera_info"  # DL 모델 서버의 엔드포인트
+
+    payload = {
+        'user_id' : user_id,
+        'camera_number': camera_number,
+        'rtsp_url' : rtsp_url
+    }
+    try:
+        response = requests.post(model_server_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print("DL 모델 서버에 카메라 정보 전송 완료.")
+        else:
+            print("DL 모델 서버 전송 실패:", response.status_code)
+    except requests.exceptions.RequestException as e:
+        print("오류 발생:", e)
+
     return jsonify({"message": "Camera added", "camera_number": camera_number}), 200
 
 # 카메라 삭제 엔드포인트
@@ -261,6 +279,24 @@ def delete_camera(camera_number):
     # 삭제
     db.session.delete(camera)
     db.session.commit()
+
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/remove_camera_info"  # DL 모델 서버의 엔드포인트
+
+    payload = {
+        'user_id': user_id,
+        'camera_number': camera_number
+    }
+
+    try:
+        response = requests.post(model_server_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print("DL 모델 서버에 카메라 삭제 요청 전송 완료.")
+        else:
+            print("DL 모델 서버 삭제 요청 실패:", response.status_code)
+    except requests.exceptions.RequestException as e:
+        print("오류 발생:", e)
 
     # 카메라 번호 재정렬
     cameras = Camera.query.filter_by(user_id=user_id).order_by(Camera.camera_number).all()
