@@ -13,19 +13,22 @@ Future<void> sendEventToFlask(
   final String? flaskAppPort = dotenv.env['FLASK_PORT'];
   final String flaskUrl = 'http://$flaskAppIp:$flaskAppPort/receive_event';
 
+  // 보낼 데이터를 JSON 형태로 변환
+  final payload = <String, dynamic>{
+    'fall_detection': fall_detection_on,
+    'fire_detection': fire_detection_on,
+    'movement_detection': movement_detection_on,
+    'user_id': userId,
+    'roi_values': roiValues,
+  };
+
   try {
     final response = await http.post(
       Uri.parse(flaskUrl),
       headers: <String, String>{
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode(<String, dynamic>{
-        'fall_detection': fall_detection_on,
-        'fire_detection': fire_detection_on,
-        'movement_detection': movement_detection_on,
-        'user_id': userId,
-        'roi_values': roiValues,
-      }),
+      body: jsonEncode(payload),
     );
 
     if (response.statusCode == 200) {

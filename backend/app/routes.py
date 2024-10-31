@@ -203,7 +203,9 @@ def get_logs():
 @bp.route('/receive_event', methods=['POST'])
 def receive_event():
     data = request.get_json()
-    
+    if data is None:
+            return jsonify({"error": "No JSON received"}), 400
+
     # 클라이언트로부터 전송된 감지 상태 값들
     fall_detection = data.get('fall_detection', False)
     fire_detection = data.get('fire_detection', False)
@@ -221,6 +223,7 @@ def receive_event():
         'user_id': user_id,
         'roi_values' : roi_values,
     }
+    print("Payload sent to model server:", payload)
     
     try:
         response = requests.post(model_server_url, json=payload, timeout=10)
