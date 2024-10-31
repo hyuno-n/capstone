@@ -8,7 +8,7 @@ import os
 
 db = SQLAlchemy()
 migrate = Migrate()
-socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet',logger=True,engineio_logger=True)
+socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
 
 def create_app():
     load_dotenv()

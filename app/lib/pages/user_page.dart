@@ -1,3 +1,4 @@
+import 'package:app/controller/log_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:app/components/drawer_widget.dart';
@@ -15,6 +16,7 @@ class User_page extends StatelessWidget {
     final UserController userController = Get.find();
     final cameraProvider =
         Provider.of<CameraProvider>(context); // CameraProvider 인스턴스 가져오기
+    final logController = Get.find<LogController>();
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -120,9 +122,9 @@ class User_page extends StatelessWidget {
                             '감지된 건 ',
                             style: TextStyle(fontSize: 14, color: Colors.black),
                           ),
-                          const Text(
-                            '4',
-                            style: TextStyle(
+                          Text(
+                            '${logController.detectionCount}',
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: Colors.black,

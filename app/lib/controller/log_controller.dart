@@ -9,6 +9,7 @@ class LogController extends GetxController {
   late NotificationManager notificationManager;
   late SocketManager socketManager;
   var logs = <Map<String, String>>[].obs;
+  int detectionCount = 0;
   String currentUserId = '';
 
   @override
@@ -23,6 +24,7 @@ class LogController extends GetxController {
   }
 
   void handleIncomingMessage(Map<String, dynamic> data) {
+    detectionCount++;
     String userId = data['user_id'] ?? "Unknown User";
     String timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
     String eventname = data['eventname'] ?? "New Event";
@@ -59,6 +61,8 @@ class LogController extends GetxController {
             'event_url': log['event_url']?.toString() ?? ''
           };
         }).toList();
+
+        detectionCount = logs.length;
       } else {
         print('Failed to fetch logs: ${response.body}');
       }
@@ -81,6 +85,7 @@ class LogController extends GetxController {
       );
       if (response.statusCode == 200) {
         logs.clear();
+        detectionCount = 0;
         print('Logs cleared successfully');
       } else {
         print('Failed to clear logs: ${response.body}');
