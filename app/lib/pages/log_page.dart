@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; // CupertinoAlertDialog를 위해 추가
+import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/components/log_list.dart';
@@ -80,7 +81,7 @@ class _LogPageState extends State<LogPage> {
             centerTitle: true,
             leading: Builder(
               builder: (context) => IconButton(
-                icon: const Icon(Icons.menu),
+                icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
                 onPressed: () {
                   Scaffold.of(context).openDrawer();
                 },

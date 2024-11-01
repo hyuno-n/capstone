@@ -52,7 +52,7 @@ class LogList extends StatelessWidget {
               // 날짜 헤더 표시
               Container(
                 padding:
-                    const EdgeInsets.symmetric(vertical: 10, horizontal: 21),
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
                 color: Colors.white,
                 child: Text(
                   dateKey,

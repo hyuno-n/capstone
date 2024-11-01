@@ -3,9 +3,14 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/drawer_widget.dart';
 import 'package:app/components/video_widget.dart';
 
-class Monitoring extends StatelessWidget {
+class Monitoring extends StatefulWidget {
   const Monitoring({super.key});
 
+  @override
+  _MonitoringState createState() => _MonitoringState();
+}
+
+class _MonitoringState extends State<Monitoring> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -28,8 +33,8 @@ class Monitoring extends StatelessWidget {
             elevation: 0, // AppBar의 기본 그림자 제거
             backgroundColor: Colors.transparent, // 투명하게 설정
             title: const Text(
-              "Monitoring",
-              style: TextStyle(fontSize: 15),
+              "Video😘",
+              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
             ),
             centerTitle: true,
             leading: Builder(

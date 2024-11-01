@@ -22,22 +22,22 @@ class User_page extends StatelessWidget {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56.0),
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 0.8,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          //decoration: BoxDecoration(
+          //  color: Colors.white,
+          //  boxShadow: [
+          //    BoxShadow(
+          //      color: Colors.grey.withOpacity(0.3),
+          //      spreadRadius: 0.8,
+          //      blurRadius: 5,
+          //      offset: const Offset(0, 2),
+          //    ),
+          //  ],
+          //),
           child: AppBar(
             elevation: 0,
             backgroundColor: Colors.transparent,
             title: const Text(
-              "User page",
+              "User",
               style: TextStyle(fontSize: 15),
             ),
             centerTitle: true,
