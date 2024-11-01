@@ -75,20 +75,20 @@ class _LoginState extends State<Login> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Colors.white,
-        body: SafeArea(
-          child: Center(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 16.0, vertical: 24.0),
             child: Column(
               children: [
-                const SizedBox(height: 80),
-                //logo
+                const SizedBox(height: 40),
                 const Icon(
                   Icons.lock,
                   size: 100,
                 ),
-
                 const SizedBox(height: 50),
-                //welcome back, you've been missed!
                 Text(
                   'welcome back, you\'ve been missed!',
                   style: TextStyle(
@@ -96,11 +96,7 @@ class _LoginState extends State<Login> {
                     fontSize: 16,
                   ),
                 ),
-
                 const SizedBox(height: 30),
-
-                //username textfield
-
                 SizedBox(
                   width: 290,
                   child: TextField(
@@ -116,11 +112,7 @@ class _LoginState extends State<Login> {
                     },
                   ),
                 ),
-
-                //password textfield
-
                 const SizedBox(height: 10),
-
                 SizedBox(
                   width: 290,
                   child: TextField(
@@ -134,10 +126,7 @@ class _LoginState extends State<Login> {
                     obscureText: true,
                   ),
                 ),
-
                 const SizedBox(height: 10),
-                //forgot password?
-
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 51.0),
                   child: Row(
@@ -150,69 +139,39 @@ class _LoginState extends State<Login> {
                     ],
                   ),
                 ),
-                //sign in  button
-
                 const SizedBox(height: 25),
-
                 SizedBox(
                   width: 280,
                   child: Column(
                     children: [
-                      // 로그인 버튼
                       Container(
-                        width: double.infinity, // 버튼을 전체 너비로 확장
+                        width: double.infinity,
                         decoration: BoxDecoration(
-                          color: Colors.black, // 버튼 배경색을 검정색으로 설정
-                          borderRadius: BorderRadius.circular(8), // 모서리 둥글게
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: ElevatedButton(
                           onPressed: () => _login(context),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor:
-                                Colors.transparent, // ElevatedButton의 기본 배경색 제거
-                            shadowColor: Colors.transparent, // 그림자 제거
+                            backgroundColor: Colors.transparent,
+                            shadowColor: Colors.transparent,
                           ),
                           child: const Text(
                             'Sign in',
-                            style: TextStyle(
-                                fontSize: 20, color: Colors.white), // 텍스트 색상 설정
+                            style: TextStyle(fontSize: 20, color: Colors.white),
                           ),
                         ),
-                      ), // 버튼 간격
-                      // 회원가입 버튼
-                      //Container(
-                      //  width: double.infinity, // 버튼을 전체 너비로 확장
-                      //  decoration: BoxDecoration(
-                      //    color: Colors.black, // 버튼 배경색을 검정색으로 설정
-                      //    borderRadius: BorderRadius.circular(8), // 모서리 둥글게
-                      //  ),
-                      //  child: TextButton(
-                      //    onPressed: () {
-                      //      Navigator.push(
-                      //        context,
-                      //        MaterialPageRoute(
-                      //            builder: (context) => const SignUpPage()),
-                      //      );
-                      //    },
-                      //    child: const Text(
-                      //      'Sign up',
-                      //      style: TextStyle(
-                      //          fontSize: 15, color: Colors.white), // 텍스트 색상 설정
-                      //    ),
-                      //  ),
-                      //),
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 170),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Text('Not a member?'),
                     TextButton(
                       onPressed: () {
-                        // 회원가입 페이지로 이동하는 로직 추가
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -231,93 +190,9 @@ class _LoginState extends State<Login> {
                 ),
               ],
             ),
-
-            //not a member? register now
           ),
-        ));
-    //return Center(
-    //  child: Padding(
-    //    padding: const EdgeInsets.all(16.0),
-    //    child: SingleChildScrollView(
-    //      child: Column(
-    //        mainAxisSize: MainAxisSize.min,
-    //        children: <Widget>[
-    //          const SizedBox(height: 170),
-    //          SizedBox(
-    //            width: 280,
-    //            child: TextField(
-    //              controller: _usernameController,
-    //              decoration: InputDecoration(
-    //                hintText: 'Username',
-    //                border: OutlineInputBorder(
-    //                  borderRadius: BorderRadius.circular(8.0),
-    //                ),
-    //              ),
-    //              onChanged: (value) {
-    //                userController.setUsername(value);
-    //              },
-    //            ),
-    //          ),
-    //          const SizedBox(height: 10),
-    //          SizedBox(
-    //            width: 280,
-    //            child: TextField(
-    //              controller: _passwordController,
-    //              decoration: InputDecoration(
-    //                hintText: 'Password',
-    //                border: OutlineInputBorder(
-    //                  borderRadius: BorderRadius.circular(8.0),
-    //                ),
-    //              ),
-    //              obscureText: true,
-    //            ),
-    //          ),
-    //          const SizedBox(height: 115),
-    //          SizedBox(
-    //            width: 280,
-    //            child: Column(
-    //              children: [
-    //                ElevatedButton(
-    //                  onPressed: () => _login(context),
-    //                  child: const Text(
-    //                    'Login',
-    //                    style: TextStyle(fontSize: 20),
-    //                  ),
-    //                ),
-    //                const SizedBox(height: 7),
-    //                TextButton(
-    //                  onPressed: () {
-    //                    Navigator.push(
-    //                      context,
-    //                      MaterialPageRoute(
-    //                          builder: (context) => const SignUpPage()),
-    //                    );
-    //                  },
-    //                  child: const Text(
-    //                    'Sign up',
-    //                    style: TextStyle(fontSize: 15),
-    //                  ),
-    //                ),
-    //                const SizedBox(height: 7),
-    //                TextButton(
-    //                  onPressed: () {
-    //                    Navigator.push(
-    //                      context,
-    //                      MaterialPageRoute(builder: (context) => const App()),
-    //                    );
-    //                  },
-    //                  child: const Text(
-    //                    'Go to Home',
-    //                    style: TextStyle(fontSize: 15),
-    //                  ),
-    //                ),
-    //              ],
-    //            ),
-    //          ),
-    //        ],
-    //      ),
-    //    ),
-    //  ),
-    //);
+        ),
+      ),
+    );
   }
 }

@@ -132,9 +132,20 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       // CupertinoPageScaffold를 Scaffold로 변경
       appBar: AppBar(
-        title: const Text("Sign up"),
+        title: Center(
+          child: Column(
+            children: [
+              Text(
+                'Welcome to MVCCTV!',
+                style: TextStyle(fontSize: 18, color: Colors.grey[700]),
+              )
+            ],
+          ),
+        ),
+        backgroundColor: Colors.white,
       ),
       body: SafeArea(
         child: CupertinoScrollbar(
@@ -148,7 +159,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                   children: [
                     const Text(
                       "아이디",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -167,10 +181,11 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                             const TextStyle(color: CupertinoColors.systemRed),
                       ),
                     const SizedBox(height: 20),
-                    const Text(
-                      "이메일",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                    const Text("이메일",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        )),
                     const SizedBox(height: 8),
                     CupertinoTextField(
                       controller: _emailController,
@@ -191,7 +206,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "비밀번호",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -213,7 +231,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "비밀번호 확인",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -236,7 +257,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "전화번호",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -258,7 +282,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "주소",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Row(
@@ -271,7 +298,8 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                           ),
                         ),
                         const SizedBox(width: 10),
-                        CupertinoButton.filled(
+                        CupertinoButton(
+                          color: Colors.black,
                           child: const Text("우편번호 찾기"),
                           onPressed: () {
                             Navigator.of(context).push(CupertinoPageRoute(
@@ -292,7 +320,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "기본주소",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -303,7 +334,10 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     const SizedBox(height: 20),
                     const Text(
                       "상세주소",
-                      style: TextStyle(fontSize: 16),
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
@@ -312,8 +346,11 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     ),
                     const SizedBox(height: 20),
                     Center(
-                      child: CupertinoButton.filled(
-                        child: const Text("Sign Up"),
+                      child: CupertinoButton(
+                        color: Colors.black,
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 10, horizontal: 110), // 패딩 설정
+                        child: const Text("Register end"),
                         onPressed: () {
                           _validateInputs();
                           if (_formKey.currentState!.validate() &&
