@@ -132,6 +132,7 @@ class LogList extends StatelessWidget {
                         context: context,
                         builder: (BuildContext context) {
                           return AlertDialog(
+                            backgroundColor: Colors.white,
                             title: const Text('Log Details'),
                             content: Column(
                               mainAxisSize: MainAxisSize.min,

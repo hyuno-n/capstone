@@ -111,6 +111,10 @@ flutter:
     - assets/images/resize_icon.gif
     - assets/images/fire_log_icon.gif
     - assets/images/suspect_icon.gif
+    - assets/images/MVCCTV_main_icon.gif
+    - assets/images/MVCCTV_main_png.png
+    - assets/images/MVCCTV_main.png
+    - assets/images/MVCCTV_Splash_logo.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

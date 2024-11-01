@@ -17,7 +17,7 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _startAnimation();
-    //_navigateToHome();
+    // _navigateToHome(); // 주석 처리된 코드
   }
 
   void _startAnimation() {
@@ -43,20 +43,16 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.blue,
+      backgroundColor: Colors.white, // 배경색을 흰색으로 설정
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-            AnimatedDefaultTextStyle(
-              duration: const Duration(milliseconds: 500),
-              style: TextStyle(
-                fontSize: 50.0,
-                color: selected ? Colors.red : Colors.white,
-                fontWeight: selected ? FontWeight.w100 : FontWeight.bold,
-              ),
-              child: const Text('MVCCTV'),
+            // GIF 이미지 추가
+            Image.asset(
+              'assets/images/MVCCTV_Splash_logo.gif',
+              height: 500, // 이미지 높이 조정 (필요에 따라 조정)
             ),
           ],
         ),

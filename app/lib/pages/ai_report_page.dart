@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/ai_report.dart';
 import 'package:app/components/drawer_widget.dart';
 
@@ -29,23 +28,18 @@ class AiReportPage extends StatelessWidget {
           child: AppBar(
             elevation: 0, // AppBar의 기본 그림자 제거
             backgroundColor: Colors.transparent, // 투명하게 설정
-            title: const Text(
-              "AI Report",
-              style: TextStyle(fontSize: 15),
-            ),
-            centerTitle: true,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/MVCCTV_main.png',
+                  height: 180, // 이미지 높이 조정
+                ),
+              ],
             ),
           ),
         ),
       ),
-      drawer: const DrawerWidget(),
+      endDrawer: const DrawerWidget(),
       body: const Center(
         child: AiReport(),
       ),

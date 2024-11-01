@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/components/drawer_widget.dart';
 import 'package:app/components/video_widget.dart';
 
@@ -23,8 +22,8 @@ class _MonitoringState extends State<Monitoring> {
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                spreadRadius: 1, // 그림자의 퍼짐 반경
-                blurRadius: 5, // 그림자 블러 정도
+                spreadRadius: 0.5, // 그림자의 퍼짐 반경
+                blurRadius: 7, // 그림자 블러 정도
                 offset: const Offset(0, 2), // 그림자의 위치 (아래쪽)
               ),
             ],
@@ -32,23 +31,18 @@ class _MonitoringState extends State<Monitoring> {
           child: AppBar(
             elevation: 0, // AppBar의 기본 그림자 제거
             backgroundColor: Colors.transparent, // 투명하게 설정
-            title: const Text(
-              "Video😘",
-              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-            ),
-            centerTitle: true,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/MVCCTV_main.png',
+                  height: 180, // 이미지 높이 조정
+                ),
+              ],
             ),
           ),
         ),
       ),
-      drawer: const DrawerWidget(),
+      endDrawer: const DrawerWidget(),
       body: const Center(
         child: VideoWidget(),
       ),

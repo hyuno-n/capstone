@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; // CupertinoAlertDialog를 위해 추가
-import 'package:flutter_svg/svg.dart';
 import 'package:get/get.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/components/log_list.dart';
@@ -74,29 +73,40 @@ class _LogPageState extends State<LogPage> {
           child: AppBar(
             elevation: 0,
             backgroundColor: Colors.transparent,
-            title: const Text(
-              'Log',
-              style: TextStyle(fontSize: 15),
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/MVCCTV_main.png',
+                  height: 180, // 이미지 높이 조정
+                ),
+              ],
             ),
-            centerTitle: true,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
-              ),
-            ),
+            //leading: Builder(
+            //  builder: (context) => IconButton(
+            //    icon: const Icon(Icons.menu), // 메뉴 아이콘을 leading에서 actions로 이동
+            //    onPressed: () {
+            //      Scaffold.of(context).openEndDrawer(); // endDrawer 열기
+            //    },
+            //  ),
+            //),
             actions: [
               IconButton(
                 icon: const Icon(Icons.delete),
                 onPressed: _showDeleteConfirmationDialog, // 다이얼로그를 호출하도록 수정
               ),
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu), // 추가된 메뉴 아이콘
+                  onPressed: () {
+                    Scaffold.of(context).openEndDrawer(); // endDrawer 열기
+                  },
+                ),
+              ),
             ],
           ),
         ),
       ),
-      drawer: const DrawerWidget(),
+      endDrawer: const DrawerWidget(),
       body: Obx(() {
         if (_logController.logs.isEmpty) {
           return const Center(child: Text('No logs available'));

@@ -1,6 +1,5 @@
 import 'package:app/controller/log_controller.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/svg.dart';
 import 'package:app/components/drawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/camera_provider.dart'; // CameraProvider import 추가
@@ -22,37 +21,46 @@ class User_page extends StatelessWidget {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56.0),
         child: Container(
-          //decoration: BoxDecoration(
-          //  color: Colors.white,
-          //  boxShadow: [
-          //    BoxShadow(
-          //      color: Colors.grey.withOpacity(0.3),
-          //      spreadRadius: 0.8,
-          //      blurRadius: 5,
-          //      offset: const Offset(0, 2),
-          //    ),
-          //  ],
-          //),
-          child: AppBar(
-            elevation: 0,
-            backgroundColor: Colors.transparent,
-            title: const Text(
-              "User",
-              style: TextStyle(fontSize: 15),
-            ),
-            centerTitle: true,
-            leading: Builder(
-              builder: (context) => IconButton(
-                icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
-                onPressed: () {
-                  Scaffold.of(context).openDrawer();
-                },
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.grey.withOpacity(0.3),
+                spreadRadius: 0.8,
+                blurRadius: 5,
+                offset: const Offset(0, 2),
               ),
+            ],
+          ),
+          child: AppBar(
+            elevation: 0, // AppBar의 기본 그림자 제거
+            backgroundColor: Colors.transparent, // 투명하게 설정
+            title: Row(
+              children: [
+                Image.asset(
+                  'assets/images/MVCCTV_main.png',
+                  height: 180, // 이미지 높이 조정
+                ),
+                //const SizedBox(width: 3), // 이미지와 텍스트 사이에 간격 추가
+                //const Text(
+                //  "MVCCTV",
+                //  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                //),
+              ],
             ),
+            // centerTitle: true,
+            // leading: Builder(
+            //   builder: (context) => IconButton(
+            //     icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
+            //     onPressed: () {
+            //       Scaffold.of(context).openEndDrawer();
+            //     },
+            //   ),
+            // ),
           ),
         ),
       ),
-      drawer: const DrawerWidget(),
+      endDrawer: const DrawerWidget(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
