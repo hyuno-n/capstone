@@ -8,13 +8,7 @@ app.config['SECRET_KEY'] = 'your_secret_key'
 def event_update():
     data = request.get_json()
     
-    fall_detection = data.get('fall_detection_on', False)
-    movement_detection = data.get('movement_detection_on', False)
-    user_id = data.get('user_id', 'Unknown')
-    roi_values = data.get('roi_values', {})  # ROI 값을 추가로 받기
-
-    # 이벤트 수신 시 콘솔에 출력
-    print(f"Received event - Fall Detection: {fall_detection}, Movement Detection: {movement_detection}, User ID: {user_id}, roi values: {roi_values}")
+    print(data)
     
     return jsonify({"message": "Event received by model server"}), 200
 

@@ -27,7 +27,7 @@ class EventLog(db.Model):
     camera_number = db.Column(db.Integer, nullable=False)
     event_url = db.Column(db.String(255), nullable=True)
 
-class Camera(db.Model):
+class CameraInfo(db.Model):
     __tablename__ = 'cameras'
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
@@ -35,3 +35,19 @@ class Camera(db.Model):
     rtsp_url = db.Column(db.String(255), nullable=False)
 
     user = db.relationship('User', backref='cameras', lazy=True)
+
+# 감지 상태 테이블
+class DetectionStatus(db.Model):
+    __tablename__ = 'detection_status'
+    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), primary_key=True)
+    camera_number = db.Column(db.Integer, primary_key=True)  # 수정된 부분
+    fall_detection_on = db.Column(db.Boolean, default=False)
+    fire_detection_on = db.Column(db.Boolean, default=False)
+    movement_detection_on = db.Column(db.Boolean, default=False)
+    roi_detection_on = db.Column(db.Boolean, default=False)
+    
+    # ROI 값을 별도 필드로 저장
+    roi_x1 = db.Column(db.Integer, default=0)
+    roi_y1 = db.Column(db.Integer, default=0)
+    roi_x2 = db.Column(db.Integer, default=1920)
+    roi_y2 = db.Column(db.Integer, default=1080)
