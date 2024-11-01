@@ -235,7 +235,6 @@ detection_status = {}
 @app.route('/event_update', methods=['POST'])
 def event_update():
     """서버에서 탐지 기능 상태 가져오기"""
-
     try:
         # request.get_json() 사용하여 POST 요청의 JSON 데이터 가져오기
         data = request.get_json()
@@ -251,18 +250,25 @@ def event_update():
         detection_status[camera_id] = {
             'fall_detection_on': data.get('fall_detection_on', False),
             'movement_detection_on': data.get('movement_detection_on', False),
-            'fire_detection_on': data.get('fire_detection_on', False)
+            'fire_detection_on': data.get('fire_detection_on', False),
+            'roi_values' : data.get('roi_values', {}),
+            'user_id' : data.get('user_id','unknown')
         }
+
+        print(detection_status[camera_id]['roi_values']['roi_x1'])
+
 
         # 상태 확인을 위한 로그 출력
         print(f"Camera {camera_id} - Fall detection: {detection_status[camera_id]['fall_detection_on']}, "
               f"Movement detection: {detection_status[camera_id]['movement_detection_on']}, "
               f"Fire detection: {detection_status[camera_id]['fire_detection_on']}")
-
+        
+        return jsonify({"status": "Detection status updated", "camera_id": camera_id}), 200
+    
     except Exception as e:
         print(f"서버 통신 중 오류 발생: {e}")
         return jsonify({"error": "Internal server error"}), 500
-
+    
 def send_alert(event_name, timestamp):
     """이벤트 발생 시 알림을 보내는 함수"""
     print(f"경고: {event_name} 발생! 알림 전송 중...")
@@ -293,7 +299,7 @@ def process_video():
     fall_detection_on = False  
     movement_detection_on = False
     fire_detection_on = False
-    roi_apply_signal = False  
+    roi_apply_signal = True  
 
     while cap.isOpened():
         success, frame = cap.read()
