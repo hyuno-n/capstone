@@ -51,7 +51,7 @@ class SocketManager {
         String cameraNumber = data['camera_number']?.toString() ?? "N/A";
 
         String title = "$eventname 발생!";
-        String message = "camera_number: $cameraNumber at $formattedTimestamp";
+        String message = "camera_number: $cameraNumber";
 
         notificationManager.showNotification(title, message);
         logController.fetchLogs(userId);
