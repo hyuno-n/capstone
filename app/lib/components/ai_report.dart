@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:app/server/detection_service.dart';
+import 'package:app/controller/user_controller.dart';
+import 'package:get/get.dart';
 
 class AiReport extends StatefulWidget {
   const AiReport({super.key});
@@ -134,11 +136,16 @@ class _AiReportState extends State<AiReport> {
     final roiProvider = Provider.of<RoiProvider>(context, listen: false);
     final roiValues = roiProvider.getRoiValues(); // ROI 값을 가져옴
 
+    // 현재 로그인한 사용자 ID를 가져오기
+    final userController =
+        Get.find<UserController>(); // UserController 인스턴스 가져오기
+    String currentUserId = userController.getUserId; // 사용자 ID 가져오기
+
     sendEventToFlask(
       isFallDetectionOn,
       isFireDetectionOn,
       isMovementDetectionOn,
-      'user123',
+      currentUserId, // 여기에 현재 로그인한 사용자 ID를 전달
       roiValues,
     );
   }
@@ -151,6 +158,7 @@ class _AiReportState extends State<AiReport> {
       // 감지 범위 스위치가 꺼질 때 ROI 좌표 초기화
       if (!value) {
         Provider.of<RoiProvider>(context, listen: false).resetRoi();
+        _updateAllDetectionStates();
         print("ROI 좌표값이 초기화되었습니다.");
       }
     });
@@ -322,7 +330,14 @@ class _AiReportState extends State<AiReport> {
                     Navigator.push(
                       context,
                       CupertinoPageRoute(
-                        builder: (context) => const RoiWidget(),
+                        builder: (context) => RoiWidget(
+                          onRoiSelected: (roi) {
+                            // ROI 값을 전달받아 저장하는 로직 추가
+                            Provider.of<RoiProvider>(context, listen: false)
+                                .updateRoi(roi);
+                            _updateAllDetectionStates();
+                          },
+                        ),
                       ),
                     );
                   },
