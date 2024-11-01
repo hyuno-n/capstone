@@ -140,16 +140,15 @@ def create_s3():
         print(f"S3 클라이언트 생성 중 오류 발생: {e}")
         return None
 
-def save_event_clip(event_name, frame):
+def save_event_clip(event_name, frame, timestamp):
     """이벤트가 발생하면 영상을 저장하는 함수"""
     global out, frames_after_event, local_filepath, s3_key
     
     if out is None:
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         clip_filename = f"{event_name}_{timestamp}.mp4"
         local_filepath = os.path.join(output_dir, clip_filename)
         s3_key = f"{S3_FOLDER_NAME}/{clip_filename}"
-        out = cv2.VideoWriter(local_filepath, fourcc, fps, (frame_width, frame_height))   
+        out = cv2.VideoWriter(local_filepath, fourcc, fps, (frame_width, frame_height))
 
         buffer_size = len(pre_event_buffer)
         if buffer_size > 0:
@@ -192,15 +191,16 @@ def upload_to_s3(local_filepath, s3_bucket_name, s3_key):
 def handle_event_detection(frame, predicted_label):
     """이벤트 발생 감지 후 처리"""
     global event_detected, frames_after_event
+    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     if predicted_label in ['Fall', 'Movement','Black_smoke','Gray_smoke','White_smoke','Fire'] and not event_detected:
         event_detected = True
         frames_after_event = 0
         print(f"{predicted_label} detected!")
-        send_alert(predicted_label)
+        send_alert(predicted_label, timestamp)
     
     if event_detected:
         pre_event_buffer.append(frame)
-        save_event_clip(predicted_label, frame)
+        save_event_clip(predicted_label, frame, timestamp)
         if frames_after_event >= post_event_length:
             event_detected = False
 
@@ -229,13 +229,12 @@ def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
     
-@app.route('/event_update', methods=['POST'])
+# ID별 탐지 상태를 저장하기 위한 딕셔너리 초기화
+detection_status = {}
 
+@app.route('/event_update', methods=['POST'])
 def event_update():
     """서버에서 탐지 기능 상태 가져오기"""
-    global fall_detection_on
-    global movement_detection_on
-    global fire_detection_on
 
     try:
         # request.get_json() 사용하여 POST 요청의 JSON 데이터 가져오기
@@ -243,34 +242,39 @@ def event_update():
         if data is None:
             return jsonify({"error": "No JSON received"}), 400
         
-        # JSON 데이터에서 fall_detection과 movement_detection 값을 가져오기
-        fall_detection_on = data.get('fall_detection_on', False)
-        movement_detection_on = data.get('movement_detection_on', False)
-        fire_detection_on = data.get('fire_detection_on', False)
+        # JSON 데이터에서 ID와 fall_detection, movement_detection, fire_detection 값을 가져오기
+        camera_id = data.get('user_id')
+        if not camera_id:
+            return jsonify({"error": "camera_id is required"}), 400
+        
+        # 개별 ID에 대한 탐지 상태 업데이트
+        detection_status[camera_id] = {
+            'fall_detection_on': data.get('fall_detection_on', False),
+            'movement_detection_on': data.get('movement_detection_on', False),
+            'fire_detection_on': data.get('fire_detection_on', False)
+        }
 
-        # 상태를 확인하기 위해서 로그 출력
-        print(f"Fall detection: {fall_detection_on}, Movement detection: {movement_detection_on}, Fire detection: {fire_detection_on}")
-
-        # 성공적인 응답 반환
-        return jsonify({"status": "success", "fall_detection": fall_detection_on, "movement_detection": movement_detection_on,"fire_detection":fire_detection_on}), 200
+        # 상태 확인을 위한 로그 출력
+        print(f"Camera {camera_id} - Fall detection: {detection_status[camera_id]['fall_detection_on']}, "
+              f"Movement detection: {detection_status[camera_id]['movement_detection_on']}, "
+              f"Fire detection: {detection_status[camera_id]['fire_detection_on']}")
 
     except Exception as e:
         print(f"서버 통신 중 오류 발생: {e}")
         return jsonify({"error": "Internal server error"}), 500
 
-def send_alert(event_name):
+def send_alert(event_name, timestamp):
     """이벤트 발생 시 알림을 보내는 함수"""
     print(f"경고: {event_name} 발생! 알림 전송 중...")
     
     url = f"http://{os.getenv('FLASK_APP_IP', '127.0.0.1')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
-
-    timestamp = datetime.datetime.now().isoformat()
     
     payload = {
-        'user_id': "qkreogus",
+        'user_id': "inyeoung",
         'timestamp': timestamp,
         'eventname': event_name,
-        'camera_number' : 1
+        'camera_number' : 1,
+        'eventurl' : ""
     }
     
     try:
@@ -284,10 +288,6 @@ def send_alert(event_name):
 
 def process_video():
     """비디오 프로세싱 메인 루프"""
-    global frames_after_event
-    global fall_detection_on 
-    global movement_detection_on  
-    global fire_detection_on  
     global roi_apply_signal  
 
     fall_detection_on = False  
@@ -329,7 +329,7 @@ def process_video():
                     
             if detected_in_roi:
                 handle_event_detection(frame, predicted_label)
-                frame = draw_skeletons_and_boxes(frame, keypoints_list, boxes)
+                frame = draw_skeletons_and_boxes(frame, preprocessed_keypoints, boxes)
                 for track_id, track in track_history.items():
                     if track:
                         points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
@@ -358,8 +358,7 @@ def process_video():
                     score = box.conf[0]
 
                      # ROI 내에 바운딩 박스가 완전히 포함되는지 확인
-                    if (roi_x1 <= x1 <= roi_x2 and roi_x1 <= x2 <= roi_x2 and
-                        roi_y1 <= y1 <= roi_y2 and roi_y1 <= y2 <= roi_y2):
+                    if is_in_detection_area(x1, y1, x2, y2):
                         fire_detected_in_roi = True  # ROI 내에서 감지됨
                         break 
 
