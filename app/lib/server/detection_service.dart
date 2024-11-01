@@ -6,6 +6,7 @@ Future<void> sendEventToFlask(
   bool fall_detection_on,
   bool fire_detection_on,
   bool movement_detection_on,
+  bool roi_detection_on,
   String userId,
   Map<String, dynamic> roiValues,
 ) async {
@@ -19,6 +20,7 @@ Future<void> sendEventToFlask(
     'fire_detection': fire_detection_on,
     'movement_detection': movement_detection_on,
     'user_id': userId,
+    'roi_detection': roi_detection_on,
     'roi_values': roiValues,
   };
 

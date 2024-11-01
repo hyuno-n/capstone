@@ -145,7 +145,8 @@ class _AiReportState extends State<AiReport> {
       isFallDetectionOn,
       isFireDetectionOn,
       isMovementDetectionOn,
-      currentUserId, // 여기에 현재 로그인한 사용자 ID를 전달
+      isDetectionRangeOn,
+      currentUserId,
       roiValues,
     );
   }

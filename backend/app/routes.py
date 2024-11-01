@@ -211,6 +211,7 @@ def receive_event():
     fire_detection = data.get('fire_detection', False)
     movement_detection = data.get('movement_detection', False)
     user_id = data.get('user_id', 'Unknown')
+    roi_detection = data.get('roi_detection',False)
 
     roi_values = data.get('roi_values',{})
     dl_model_ip = current_app.config['DL_MODEL_IP']
@@ -221,6 +222,7 @@ def receive_event():
         'fire_detection_on': fire_detection,
         'movement_detection_on': movement_detection,
         'user_id': user_id,
+        'roi_detection_on' : roi_detection,
         'roi_values' : roi_values,
     }
     print("Payload sent to model server:", payload)
