@@ -91,7 +91,18 @@ def log_event():
     bucket_name = current_app.config['S3_BUCKET_NAME']
     region_name = current_app.config['AWS_REGION']
 
-    formatted_timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S').strftime('%Y%m%d_%H%M%S')
+    try:
+        # 먼저 기존 형식 ('%Y-%m-%d %H:%M:%S') 시도
+        timestamp = datetime.strptime(timestamp_str, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+        try:
+            # 실패하면 새로운 형식 ('%Y%m%d_%H%M%S') 시도
+            timestamp = datetime.strptime(timestamp_str, '%Y%m%d_%H%M%S')
+        except ValueError:
+            return jsonify({"error": "Invalid timestamp format"}), 400
+        
+
+    formatted_timestamp = timestamp.strftime('%Y%m%d_%H%M%S')
     key_name = f"saved_clips/{eventname}_{formatted_timestamp}.mp4"
 
     # 최종 URL 생성
@@ -102,7 +113,7 @@ def log_event():
         return jsonify({"error": "Missing user_id"}), 400
 
     # EventLog에 user_id를 포함하여 생성
-    new_event = EventLog(user_id=user_id, timestamp=timestamp_str, eventname=eventname, camera_number=camera_number,event_url = event_url)
+    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number,event_url = event_url)
     db.session.add(new_event)
     db.session.commit()
 
@@ -237,22 +248,52 @@ def receive_event():
     # 데이터베이스에 변경 사항 커밋
     db.session.commit()
 
-    # 모델 서버에 업데이트된 감지 상태 전송
+    camera_infos = CameraInfo.query.filter_by(user_id=user_id).first()
+    detection_statuses = DetectionStatus.query.filter_by(user_id=user_id).first()
+
+    # 각 카메라별 감지 상태와 URL을 camera_info에 저장
+    camera_info = {}
+    for cam in camera_infos:
+        status = next((s for s in detection_statuses if s.camera_number == cam.camera_number), None)
+        if status:
+            camera_info[int(cam.camera_number)] = {
+                'rtsp_url': cam.rtsp_url,
+                'fall_detection_on': status.fall_detection_on,
+                'fire_detection_on': status.fire_detection_on,
+                'movement_detection_on': status.movement_detection_on,
+                'roi_detection_on': status.roi_detection_on,
+                'roi_values': {
+                    'roi_x1': status.roi_x1,
+                    'roi_y1': status.roi_y1,
+                    'roi_x2': status.roi_x2,
+                    'roi_y2': status.roi_y2
+                }
+            }
+
+    # 최종 payload 생성
     payload = {
         'user_id': user_id,
-        'camera_number': camera_number,
-        'fall_detection_on': fall_detection,
-        'fire_detection_on': fire_detection,
-        'movement_detection_on': movement_detection,
-        'roi_detection_on': roi_detection,
-        'roi_values': roi_values,
+        'camera_id' : camera_number,
+        'camera_info': camera_info
     }
-    
-    send_event_to_model_server(user_id, payload)
+
+    # 모델 서버 URL
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/event_update"
+
+    # 모델 서버에 payload 전송
+    try:
+        response = requests.post(model_server_url, json=payload, timeout=10)
+        if response.status_code == 200:
+            print("모델 서버에 이벤트 전송 완료.")
+        else:
+            print("모델 서버 이벤트 전송 실패:", response.status_code)
+    except requests.exceptions.RequestException as e:
+        print("오류 발생:", e)
 
     return jsonify({"message": "Detection status updated and event transmitted successfully"}), 200
 
-# 카메라 추가 엔드포인트
 @bp.route('/add_camera', methods=['POST'])
 def add_camera():
     data = request.get_json()
@@ -262,9 +303,14 @@ def add_camera():
     user_id = data['user_id']
     rtsp_url = data['rtsp_url']
 
-    # 카메라 번호 할당
-    last_camera = CameraInfo.query.filter_by(user_id=user_id).order_by(CameraInfo.camera_number.desc()).first()
-    camera_number = 1 if not last_camera else last_camera.camera_number + 1
+    # 해당 user_id에 사용 가능한 가장 작은 camera_number를 찾습니다.
+    existing_cameras = CameraInfo.query.filter_by(user_id=user_id).order_by(CameraInfo.camera_number).all()
+    existing_camera_numbers = {camera.camera_number for camera in existing_cameras}
+
+    # 사용 가능한 가장 작은 camera_number 찾기
+    camera_number = 1
+    while camera_number in existing_camera_numbers:
+        camera_number += 1
 
     # 새로운 카메라와 감지 상태 추가
     new_camera = CameraInfo(user_id=user_id, camera_number=camera_number, rtsp_url=rtsp_url)
@@ -286,14 +332,40 @@ def add_camera():
     db.session.commit()
 
     # 모델 서버에 전송할 데이터 준비
+    camera_info = {
+        camera_number: {
+            'rtsp_url': rtsp_url,
+            'fall_detection_on': new_detection_status.fall_detection_on,
+            'fire_detection_on': new_detection_status.fire_detection_on,
+            'movement_detection_on': new_detection_status.movement_detection_on,
+            'roi_detection_on': new_detection_status.roi_detection_on,
+            'roi_values': {
+                'roi_x1': new_detection_status.roi_x1,
+                'roi_y1': new_detection_status.roi_y1,
+                'roi_x2': new_detection_status.roi_x2,
+                'roi_y2': new_detection_status.roi_y2
+            }
+        }
+    }
+    
     payload = {
         'user_id': user_id,
-        'camera_number': camera_number,
-        'rtsp_url': rtsp_url
+        'camera_info': camera_info
     }
-    send_event_to_model_server(user_id, payload)
+
+    # 모델 서버 URL
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/add_camera"
+
+    response = requests.post(model_server_url, json=payload, timeout=10)
+    if response.status_code == 200:
+        print("모델 서버에 이벤트 전송 완료.")
+    else:
+        print("모델 서버 이벤트 전송 실패:", response.status_code)
 
     return jsonify({"message": "Camera added", "camera_number": camera_number}), 200
+
 
 # 카메라 삭제 엔드포인트
 @bp.route('/delete_camera/<int:camera_number>', methods=['DELETE'])
@@ -311,72 +383,19 @@ def delete_camera(camera_number):
         db.session.delete(detection_status)
     db.session.commit()
 
-    # 카메라 번호 재정렬
-    cameras = CameraInfo.query.filter_by(user_id=user_id).order_by(CameraInfo.camera_number).all()
-    for i, cam in enumerate(cameras):
-        cam.camera_number = i + 1
-    db.session.commit()
-
     # 모델 서버에 전송할 데이터 준비
     payload = {
         'user_id': user_id,
-        'camera_number': camera_number
+        'camera_id': camera_number
     }
-    send_event_to_model_server(user_id, payload)
+    dl_model_ip = current_app.config['DL_MODEL_IP']
+    dl_model_port = current_app.config['DL_MODEL_PORT']
+    model_server_url = f"http://{dl_model_ip}:{dl_model_port}/remove_camera"
+
+    response = requests.post(model_server_url, json=payload, timeout=10)
+    if response.status_code == 200:
+        print("모델 서버에 이벤트 전송 완료.")
+    else:
+        print("모델 서버 이벤트 전송 실패:", response.status_code)
 
     return jsonify({"message": "Camera deleted and numbers reordered"}), 200
-
-# 모델 서버로 이벤트 전송하는 공통 함수
-def send_event_to_model_server(user_id, new_data):
-    Session = sessionmaker(bind=db.engine)
-    session = Session()
-
-    try:
-        # 사용자에 대한 모든 카메라 및 감지 상태 조회
-        camera_infos = session.query(CameraInfo).filter_by(user_id=user_id).all()
-        detection_statuses = session.query(DetectionStatus).filter_by(user_id=user_id).all()
-
-        # 각 카메라별 감지 상태와 URL을 camera_info에 저장
-        camera_info = {}
-        for cam in camera_infos:
-            detection_status = next(
-                (status for status in detection_statuses if status.camera_number == cam.camera_number),
-                None
-            )
-            if detection_status:
-                camera_info[f'camera_number{cam.camera_number}'] = {
-                    'rtsp_url': cam.rtsp_url,
-                    'fall_detection_on': detection_status.fall_detection_on,
-                    'fire_detection_on': detection_status.fire_detection_on,
-                    'movement_detection_on': detection_status.movement_detection_on,
-                    'roi_detection_on': detection_status.roi_detection_on,
-                    'roi_values': {
-                        'roi_x1': detection_status.roi_x1,
-                        'roi_y1': detection_status.roi_y1,
-                        'roi_x2': detection_status.roi_x2,
-                        'roi_y2': detection_status.roi_y2
-                    }
-                }
-
-        # 최종 payload 생성
-        payload = {
-            'user_id': user_id,
-            'camera_info': camera_info
-        }
-
-        # 모델 서버 URL
-        dl_model_ip = current_app.config['DL_MODEL_IP']
-        dl_model_port = current_app.config['DL_MODEL_PORT']
-        model_server_url = f"http://{dl_model_ip}:{dl_model_port}/event_update"
-
-        response = requests.post(model_server_url, json=payload, timeout=10)
-        if response.status_code == 200:
-            print("모델 서버에 이벤트 전송 완료.")
-        else:
-            print("모델 서버 이벤트 전송 실패:", response.status_code)
-
-    except requests.exceptions.RequestException as e:
-        print("오류 발생:", e)
-
-    finally:
-        session.close()

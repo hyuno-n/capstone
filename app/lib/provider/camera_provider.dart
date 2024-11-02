@@ -15,7 +15,6 @@ class CameraProvider extends ChangeNotifier {
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
     final String url = 'http://$flaskIp:$flaskPort/add_camera'; // 적절한 엔드포인트로 변경
-
     try {
       final response = await http.post(
         Uri.parse(url),

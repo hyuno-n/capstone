@@ -44,8 +44,7 @@ class SocketManager {
         String timestamp =
             data['timestamp'] ?? DateTime.now().toIso8601String();
         DateTime dateTime = DateTime.parse(timestamp);
-        String formattedTimestamp =
-            DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
+        DateFormat('yyyy-MM-dd HH:mm:ss').format(dateTime);
 
         String eventname = data['eventname'] ?? "New Event";
         String cameraNumber = data['camera_number']?.toString() ?? "N/A";
