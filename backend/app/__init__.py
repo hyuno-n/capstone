@@ -53,9 +53,9 @@ def create_app():
 
         def start_scheduler():
             scheduler = BackgroundScheduler()
-            scheduler.add_job(delete_old_logs, 'interval', days=1)  # 20초마다 실행 (테스트용)
+            scheduler.add_job(delete_old_logs, 'interval', days=1)
             scheduler.start()
-            print("스케줄러가 시작되었습니다.")  # 스케줄러 시작 확인용 메시지
+            print("스케줄러가 시작되었습니다.")
             atexit.register(lambda: scheduler.shutdown())
             print("애플리케이션이 종료될 때 스케줄러도 종료됩니다.")
 

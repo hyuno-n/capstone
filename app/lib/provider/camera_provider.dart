@@ -197,6 +197,10 @@ class CameraProvider extends ChangeNotifier {
     }
   }
 
+  int getCameraIndex(int cameraNumber) {
+    return _cameraNumbers.indexOf(cameraNumber) + 1;
+  }
+
   Future<void> _saveDetectionStatus(int cameraNumber) async {
     final prefs = await SharedPreferences.getInstance();
     final statuses = _detectionStatus[cameraNumber];

@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:app/server/play_aws.dart';
 import 'package:app/server/download_aws.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:get/get.dart';
+import 'package:app/provider/camera_provider.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'dart:ui';
+import 'package:flutter/services.dart';
 
 class LogList extends StatelessWidget {
   final List<Map<String, String>> logs;
@@ -11,14 +15,12 @@ class LogList extends StatelessWidget {
 
   LogList({super.key, required this.logs});
 
-  // 로그 데이터를 날짜별로 그룹화하고 최신순으로 정렬하는 함수
   Map<String, List<Map<String, String>>> _groupLogsByDate() {
     Map<String, List<Map<String, String>>> groupedLogs = {};
 
     for (var log in logs) {
       DateTime dateTime = DateTime.parse(log['timestamp']!);
-      String dateKey =
-          DateFormat('yy.MM.dd').format(dateTime); // 날짜 형식을 yy.MM.dd로 설정
+      String dateKey = DateFormat('yy.MM.dd').format(dateTime);
 
       if (groupedLogs[dateKey] == null) {
         groupedLogs[dateKey] = [];
@@ -26,7 +28,6 @@ class LogList extends StatelessWidget {
       groupedLogs[dateKey]!.add(log);
     }
 
-    // 각 날짜별 로그를 최신순으로 정렬
     groupedLogs.forEach((key, value) {
       value.sort((a, b) => DateTime.parse(b['timestamp']!)
           .compareTo(DateTime.parse(a['timestamp']!)));
@@ -39,7 +40,8 @@ class LogList extends StatelessWidget {
   Widget build(BuildContext context) {
     final groupedLogs = _groupLogsByDate();
     final sortedDates = groupedLogs.keys.toList()
-      ..sort((a, b) => b.compareTo(a)); // 날짜 순으로 정렬 (최신 날짜가 위로)
+      ..sort((a, b) => b.compareTo(a));
+    final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
 
     return SingleChildScrollView(
       child: Column(
@@ -49,7 +51,6 @@ class LogList extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // 날짜 헤더 표시
               Container(
                 padding:
                     const EdgeInsets.symmetric(vertical: 10, horizontal: 15),
@@ -60,11 +61,8 @@ class LogList extends StatelessWidget {
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              // 해당 날짜의 로그 리스트 표시
               ...dateLogs.map((log) {
                 DateTime dateTime = DateTime.parse(log['timestamp']!);
-                String formattedTimestamp =
-                    DateFormat('yy.MM.dd HH:mm:ss').format(dateTime);
                 String formattedTime = DateFormat('HH:mm:ss').format(dateTime);
 
                 String eventIcon;
@@ -83,7 +81,7 @@ class LogList extends StatelessWidget {
                 }
 
                 return Dismissible(
-                  key: UniqueKey(), // 항상 고유한 키 사용
+                  key: UniqueKey(),
                   direction: DismissDirection.endToStart,
                   background: Container(
                     alignment: Alignment.centerRight,
@@ -92,19 +90,16 @@ class LogList extends StatelessWidget {
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
                   onDismissed: (direction) {
-                    // 로그 항목을 삭제하고 logs 리스트에서도 해당 항목 제거
                     logController.deleteLog(log['user_id']!, log['timestamp']!);
                     logs.removeWhere(
                         (item) => item['timestamp'] == log['timestamp']);
-
-                    // 상태 업데이트
                     logController.update();
                   },
                   child: ListTile(
                     leading: eventIcon.isNotEmpty
                         ? Padding(
-                            padding: const EdgeInsets.only(
-                                left: 13.0, right: 13.0), // 오른쪽 여백 추가
+                            padding:
+                                const EdgeInsets.only(left: 13.0, right: 13.0),
                             child: Image.asset(
                               eventIcon,
                               width: 55,
@@ -122,99 +117,21 @@ class LogList extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 20),
                         ),
                         Text(
-                          'Camera ${log['camera_number']}',
+                          'Camera ${cameraProvider.getCameraIndex(int.parse(log['camera_number']!))}',
                           style: TextStyle(color: Colors.grey[700]),
                         ),
                         Text(
                           formattedTime,
                           style: TextStyle(color: Colors.grey[600]),
-                        )
-                      ],
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.download),
-                          iconSize: 23,
-                          onPressed: () {
-                            DownloadAWS.downloadVideo(
-                                log['event_url']!, context);
-                          },
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.play_arrow),
-                          iconSize: 28,
-                          onPressed: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    VlcPlayerScreen(url: log['event_url']!),
-                              ),
-                            );
-                          },
                         ),
                       ],
                     ),
-                    //onTap: () {
-                    //  showDialog(
-                    //    context: context,
-                    //    builder: (BuildContext context) {
-                    //      return AlertDialog(
-                    //        backgroundColor: Colors.white,
-                    //        title: const Text('Log Details'),
-                    //        content: Column(
-                    //          mainAxisSize: MainAxisSize.min,
-                    //          crossAxisAlignment: CrossAxisAlignment.start,
-                    //          children: [
-                    //            Text('Event: ${log['eventname']}'),
-                    //            Text('User ID: ${log['user_id']}'),
-                    //            Text('Time: $formattedTimestamp'),
-                    //            Text('Camera: ${log['camera_number']}'),
-                    //            const SizedBox(height: 8),
-                    //            const Text('URL:'),
-                    //            SelectableText(
-                    //              log['event_url'] ?? 'No URL available',
-                    //              style: const TextStyle(color: Colors.blue),
-                    //              textAlign: TextAlign.left,
-                    //              maxLines: null,
-                    //            ),
-                    //          ],
-                    //        ),
-                    //        actions: [
-                    //          TextButton(
-                    //            onPressed: () {
-                    //              DownloadAWS.downloadVideo(
-                    //                  log['event_url']!, context);
-                    //            },
-                    //            child: const Text('Download'),
-                    //          ),
-                    //          TextButton(
-                    //            onPressed: () {
-                    //              Navigator.of(context).push(
-                    //                MaterialPageRoute(
-                    //                  builder: (context) => VlcPlayerScreen(
-                    //                      url: log['event_url']!),
-                    //                ),
-                    //              );
-                    //            },
-                    //            child: const Text('Play'),
-                    //          ),
-                    //          TextButton(
-                    //            onPressed: () {
-                    //              Navigator.of(context).pop();
-                    //            },
-                    //            child: const Text('Close'),
-                    //          ),
-                    //        ],
-                    //      );
-                    //    },
-                    //  );
-                    //},
+                    onTap: () {
+                      _showFullScreenVideo(context, log['event_url']!);
+                    },
                   ),
                 );
-              }).toList(),
-              // 각 날짜별 로그 그룹 사이에 경계선 추가
+              }),
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Divider(
@@ -225,6 +142,192 @@ class LogList extends StatelessWidget {
             ],
           );
         }).toList(),
+      ),
+    );
+  }
+
+  // 비디오 재생 팝업 함수
+  void _showFullScreenVideo(BuildContext context, String url) {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        opaque: false,
+        barrierDismissible: true,
+        pageBuilder: (context, animation, secondaryAnimation) {
+          return Center(
+            child: ScaleTransition(
+              scale: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeInOut,
+              ),
+              child: Dialog(
+                backgroundColor: Colors.transparent,
+                child: Container(
+                  width: MediaQuery.of(context).size.width,
+                  height: MediaQuery.of(context).size.height * 0.5,
+                  decoration: BoxDecoration(
+                    color: Colors.black87,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          IconButton(
+                            icon:
+                                const Icon(Icons.download, color: Colors.blue),
+                            onPressed: () {
+                              DownloadAWS.downloadVideo(url, context);
+                            },
+                          ),
+                        ],
+                      ),
+                      Expanded(
+                        child: VlcPlayerScreen(url: url),
+                      ),
+                      const Divider(
+                        color: Colors.grey,
+                        thickness: 1,
+                        height: 1,
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text(
+                              '닫기',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.blue),
+                            ),
+                          ),
+                          const SizedBox(width: 20),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      FullScreenVideoPlayer(url: url),
+                                ),
+                              );
+                            },
+                            child: const Text(
+                              '전체 화면',
+                              style:
+                                  TextStyle(fontSize: 16, color: Colors.blue),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10.0, sigmaY: 10.0),
+              child: child,
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class VlcPlayerScreen extends StatefulWidget {
+  final String url;
+  final bool fullScreen;
+
+  const VlcPlayerScreen({required this.url, this.fullScreen = false});
+
+  @override
+  _VlcPlayerScreenState createState() => _VlcPlayerScreenState();
+}
+
+class _VlcPlayerScreenState extends State<VlcPlayerScreen> {
+  late VlcPlayerController _vlcController;
+
+  @override
+  void initState() {
+    super.initState();
+    _vlcController = VlcPlayerController.network(
+      widget.url,
+      hwAcc: HwAcc.full,
+      autoPlay: true,
+    );
+
+    if (widget.fullScreen) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeRight,
+        DeviceOrientation.landscapeLeft,
+      ]);
+    }
+  }
+
+  @override
+  void dispose() {
+    _vlcController.stop();
+    _vlcController.dispose();
+
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+    ]);
+
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: VlcPlayer(
+        controller: _vlcController,
+        aspectRatio: 16 / 9,
+        placeholder: Center(child: CircularProgressIndicator()),
+      ),
+    );
+  }
+}
+
+class FullScreenVideoPlayer extends StatelessWidget {
+  final String url;
+
+  const FullScreenVideoPlayer({Key? key, required this.url}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Center(
+            child: VlcPlayerScreen(url: url, fullScreen: true),
+          ),
+          Positioned(
+            top: 10,
+            left: 10,
+            child: IconButton(
+              icon: Icon(Icons.close, color: Colors.black),
+              onPressed: () async {
+                await SystemChrome.setPreferredOrientations([
+                  DeviceOrientation.portraitUp,
+                  DeviceOrientation.portraitDown,
+                ]);
+                Navigator.of(context).pop();
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
