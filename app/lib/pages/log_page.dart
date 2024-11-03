@@ -13,14 +13,36 @@ class LogPage extends StatefulWidget {
   _LogPageState createState() => _LogPageState();
 }
 
-class _LogPageState extends State<LogPage> {
+class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
   final LogController _logController = Get.put(LogController());
   final UserController _userController = Get.find<UserController>();
+  final logController = Get.find<LogController>();
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
 
   @override
   void initState() {
     super.initState();
     _logController.fetchLogs(_userController.username.value);
+
+    // 애니메이션 컨트롤러 초기화
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500), // 애니메이션 시간 설정
+      vsync: this,
+    );
+
+    _animation = Tween<Offset>(
+      begin: Offset(0, 0.2), // 아래에서 살짝 나타남
+      end: Offset.zero, // 최종 위치
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut, // 자연스러운 커브
+    ));
+
+    // 애니메이션 시작
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _controller.forward();
+    });
   }
 
   // 로그 삭제 확인 다이얼로그
@@ -92,33 +114,37 @@ class _LogPageState extends State<LogPage> {
             actions: [
               SizedBox(
                 child: Stack(
-                  alignment: Alignment.topRight, // 빨간 점의 위치 조정
+                  alignment: Alignment.topRight,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.notifications),
                       iconSize: 32,
                       onPressed: () {
-                        // NotificationPage로 이동
+                        logController
+                            .resetNotificationCount(); // 알림 페이지로 가기 전에 알림 수 리셋
                         Navigator.of(context).push(
                           CupertinoPageRoute(
                             builder: (context) => const NotificationPage(),
                           ),
                         );
-                      }, // 다이얼로그를 호출하도록 수정
+                      },
                     ),
-                    Positioned(
-                      right: 12,
-                      top: 12,
-                      child: Container(
-                        width: 9, // 빨간 점의 너비
-                        height: 9, // 빨간 점의 높이
-                        decoration: BoxDecoration(
-                          color:
-                              const Color.fromARGB(255, 255, 61, 61), // 빨간 점 색상
-                          shape: BoxShape.circle, // 원형으로 설정
-                        ),
-                      ),
-                    ),
+                    Obx(() {
+                      return logController.newNotificationCount.value > 0
+                          ? Positioned(
+                              right: 12,
+                              top: 12,
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 255, 61, 61),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            )
+                          : Container(); // 알림이 없으면 빈 컨테이너 반환
+                    }),
                   ],
                 ),
               ),
@@ -132,7 +158,26 @@ class _LogPageState extends State<LogPage> {
       // endDrawer: const DrawerWidget(),
       body: Obx(() {
         if (_logController.logs.isEmpty) {
-          return const Center(child: Text('No logs available'));
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                SlideTransition(
+                  position: _animation,
+                  child: Image.asset(
+                    'assets/images/no_logg_icon.png',
+                    width: 300,
+                    height: 300,
+                    fit: BoxFit.cover,
+                  ),
+                ), // 이미지와 텍스트 간격
+                const Text(
+                  '로그가 없습니다',
+                  style: TextStyle(fontSize: 20, color: Colors.grey),
+                ),
+              ],
+            ),
+          );
         } else {
           return Column(
             children: [
