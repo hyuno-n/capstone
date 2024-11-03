@@ -118,7 +118,7 @@ class LogList extends StatelessWidget {
                               fontWeight: FontWeight.bold, fontSize: 20),
                         ),
                         Text(
-                          '${log['user_id']} / Camera ${log['camera_number']}',
+                          'Camera ${log['camera_number']}',
                           style: TextStyle(color: Colors.grey[700]),
                         ),
                         Text(

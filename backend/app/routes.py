@@ -3,7 +3,7 @@ from flask_socketio import emit, SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User, EventLog, CameraInfo, DetectionStatus
 from . import db, socketio
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import requests
 from flask_cors import CORS
@@ -11,7 +11,6 @@ import boto3
 from sqlalchemy.orm import sessionmaker
 
 bp = Blueprint('main', __name__)
-
 def get_s3_client():
     return boto3.client(
         's3',

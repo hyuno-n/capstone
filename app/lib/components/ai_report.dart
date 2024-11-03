@@ -141,14 +141,6 @@ class _AiReportState extends State<AiReport> {
   }
 
   Widget _buildCameraSettings(int cameraIndex) {
-    final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
-    final cameraNumber = cameraProvider.cameraNumbers[cameraIndex];
-    if (cameraIndex >= cameraProvider.cameraNumbers.length) {
-      return SizedBox();
-    }
-
-    final cameraSettings = cameraProvider.detectionStatus[cameraNumber] ?? {};
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
