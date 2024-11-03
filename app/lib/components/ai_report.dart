@@ -54,6 +54,8 @@ class _AiReportState extends State<AiReport> {
   }
 
   void _onDetectionRangeChanged(int cameraNumber, bool value) {
+    final roiProvider = Provider.of<RoiProvider>(context, listen: false);
+
     setState(() {
       _saveSwitchState(cameraNumber, 'Range', value);
 
@@ -74,7 +76,7 @@ class _AiReportState extends State<AiReport> {
           ),
         );
       } else {
-        Provider.of<RoiProvider>(context, listen: false).resetRoi();
+        roiProvider.resetRoi();
         _updateDetectionStates(cameraNumber);
       }
     });
@@ -141,6 +143,10 @@ class _AiReportState extends State<AiReport> {
   Widget _buildCameraSettings(int cameraIndex) {
     final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
     final cameraNumber = cameraProvider.cameraNumbers[cameraIndex];
+    if (cameraIndex >= cameraProvider.cameraNumbers.length) {
+      return SizedBox();
+    }
+
     final cameraSettings = cameraProvider.detectionStatus[cameraNumber] ?? {};
 
     return Column(

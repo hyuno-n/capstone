@@ -370,6 +370,8 @@ def add_camera():
     
     payload = {
         'user_id': user_id,
+        'camera_id' : camera_number,
+        'rtsp_url' : rtsp_url,
         'camera_info': camera_info
     }
 

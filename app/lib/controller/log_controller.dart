@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -13,6 +14,10 @@ class LogController extends GetxController {
   var logs = <Map<String, String>>[].obs; // 관찰 가능한 형식으로 저장된 로그 리스트
   int detectionCount = 0; // 총 감지된 이벤트 수
   String currentUserId = ''; // 현재 사용자의 ID
+
+  RxBool isLoading = false.obs;
+  RxBool hasError = false.obs;
+  Timer? _retryTimer;
 
   // 컨트롤러 초기화 메소드로서 알림 관리자 초기화
   @override
@@ -54,6 +59,9 @@ class LogController extends GetxController {
   // 서버로부터 로그 데이터를 가져오는 메소드
   Future<void> fetchLogs(String userId) async {
     currentUserId = userId; // 현재 사용자 ID 설정
+    isLoading.value = true;
+    hasError.value = false;
+
     final String? flaskIp = dotenv.env['FLASK_IP']; // 환경 변수에서 Flask 서버 IP 가져오기
     final String? flaskPort =
         dotenv.env['FLASK_PORT']; // 환경 변수에서 Flask 서버 포트 가져오기
@@ -76,12 +84,23 @@ class LogController extends GetxController {
         }).toList(); // 응답 데이터를 로그 리스트에 추가
 
         detectionCount = logs.length; // 감지된 로그 수로 감지 횟수 설정
+        isLoading.value = false;
       } else {
-        print('Failed to fetch logs: ${response.body}'); // 오류 메시지 출력
+        _handleFetchError();
       }
     } catch (e) {
-      print('Error fetching logs: $e'); // 예외 발생 시 오류 메시지 출력
+      _handleFetchError();
     }
+  }
+
+  void _handleFetchError() {
+    hasError.value = true;
+    isLoading.value = false;
+
+    _retryTimer?.cancel();
+    _retryTimer = Timer(Duration(seconds: 5), () {
+      fetchLogs(currentUserId);
+    });
   }
 
   // 서버에 사용자 로그를 삭제 요청하는 메소드
@@ -140,6 +159,7 @@ class LogController extends GetxController {
   // 소켓 연결을 정리하는 메소드
   @override
   void onClose() {
+    _retryTimer?.cancel();
     socketManager.disconnect(); // 소켓 연결 해제
     super.onClose(); // 부모 클래스의 onClose 메소드 호출
   }

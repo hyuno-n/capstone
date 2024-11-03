@@ -27,17 +27,24 @@ class CameraProvider extends ChangeNotifier {
         'Move':
             prefs.getBool('camera${cameraNumber}_movementDetection') ?? false,
         'Range': prefs.getBool('camera${cameraNumber}_detectionRange') ?? false,
+        'roi': {
+          'x1': prefs.getInt('camera${cameraNumber}_roi_x1') ?? 0,
+          'y1': prefs.getInt('camera${cameraNumber}_roi_y1') ?? 0,
+          'x2': prefs.getInt('camera${cameraNumber}_roi_x2') ?? 1920,
+          'y2': prefs.getInt('camera${cameraNumber}_roi_y2') ?? 1080,
+        }
       };
     }
     notifyListeners();
   }
 
-  // 모든 카메라의 상태를 SharedPreferences에 저장
   Future<void> saveAllDetectionStatus() async {
     final prefs = await SharedPreferences.getInstance();
     for (var entry in _detectionStatus.entries) {
       int cameraNumber = entry.key;
       Map<String, dynamic> statuses = entry.value;
+
+      // 기본 상태 저장
       await prefs.setBool(
           'camera${cameraNumber}_fallDetection', statuses['Fall'] ?? false);
       await prefs.setBool(
@@ -46,10 +53,17 @@ class CameraProvider extends ChangeNotifier {
           'camera${cameraNumber}_movementDetection', statuses['Move'] ?? false);
       await prefs.setBool(
           'camera${cameraNumber}_detectionRange', statuses['Range'] ?? false);
+
+      // ROI 값 저장
+      Map<String, int> roi =
+          statuses['roi'] ?? {'x1': 0, 'y1': 0, 'x2': 1920, 'y2': 1080};
+      await prefs.setInt('camera${cameraNumber}_roi_x1', roi['x1'] ?? 0);
+      await prefs.setInt('camera${cameraNumber}_roi_y1', roi['y1'] ?? 0);
+      await prefs.setInt('camera${cameraNumber}_roi_x2', roi['x2'] ?? 1920);
+      await prefs.setInt('camera${cameraNumber}_roi_y2', roi['y2'] ?? 1080);
     }
   }
 
-  // 기존 코드 그대로 유지
   Future<void> initializeCameraNumbers() async {
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
@@ -75,10 +89,10 @@ class CameraProvider extends ChangeNotifier {
     _rtspUrls.add(rtspUrl);
     _cameraNumbers.add(cameraNumber);
     _detectionStatus[cameraNumber] = {
-      'fall_detection': false,
-      'fire_detection': false,
-      'movement_detection': false,
-      'range_detection': false,
+      'Fall': false,
+      'Fire': false,
+      'Move': false,
+      'Range': false,
       'roi': {'x1': 0, 'y1': 0, 'x2': 1920, 'y2': 1080},
     };
     notifyListeners();
@@ -150,7 +164,6 @@ class CameraProvider extends ChangeNotifier {
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
     final String url = 'http://$flaskIp:$flaskPort/delete_camera/$cameraNumber';
-
     try {
       final response = await http.delete(Uri.parse(url));
       if (response.statusCode == 200) {
@@ -170,8 +183,17 @@ class CameraProvider extends ChangeNotifier {
   ) async {
     if (_detectionStatus[cameraNumber] != null) {
       _detectionStatus[cameraNumber]![detectionType] = status;
-      await _saveDetectionStatus(cameraNumber); // 상태 저장
+      await _saveDetectionStatus(cameraNumber);
       notifyListeners();
+    }
+  }
+
+  String getRtspUrlByCameraNumber(int cameraNumber) {
+    int index = _cameraNumbers.indexOf(cameraNumber);
+    if (index != -1) {
+      return _rtspUrls[index];
+    } else {
+      throw Exception("Invalid camera number: $cameraNumber");
     }
   }
 
@@ -186,5 +208,12 @@ class CameraProvider extends ChangeNotifier {
         'camera${cameraNumber}_movementDetection', statuses?['Move'] ?? false);
     await prefs.setBool(
         'camera${cameraNumber}_detectionRange', statuses?['Range'] ?? false);
+
+    Map<String, int> roi =
+        statuses?['roi'] ?? {'x1': 0, 'y1': 0, 'x2': 1920, 'y2': 1080};
+    await prefs.setInt('camera${cameraNumber}_roi_x1', roi['x1'] ?? 0);
+    await prefs.setInt('camera${cameraNumber}_roi_y1', roi['y1'] ?? 0);
+    await prefs.setInt('camera${cameraNumber}_roi_x2', roi['x2'] ?? 1920);
+    await prefs.setInt('camera${cameraNumber}_roi_y2', roi['y2'] ?? 1080);
   }
 }

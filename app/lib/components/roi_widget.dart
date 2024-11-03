@@ -29,15 +29,18 @@ class _RoiWidgetState extends State<RoiWidget> {
   @override
   void initState() {
     super.initState();
-
-    // 선택된 카메라 URL 가져와 초기화
     final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
-    String selectedUrl = cameraProvider.rtspUrls[widget.selectedCameraIndex];
+    try {
+      String selectedUrl =
+          cameraProvider.getRtspUrlByCameraNumber(widget.selectedCameraIndex);
 
-    _vlcViewController = VlcPlayerController.network(
-      selectedUrl,
-      options: VlcPlayerOptions(),
-    );
+      _vlcViewController = VlcPlayerController.network(
+        selectedUrl,
+        options: VlcPlayerOptions(),
+      );
+    } catch (e) {
+      print("Error: ${e.toString()}");
+    }
   }
 
   @override
@@ -91,8 +94,6 @@ class _RoiWidgetState extends State<RoiWidget> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const SizedBox(height: 20),
-
-            // 배경에 스트리밍 영상과 ROI 설정 겹치기
             Stack(
               children: [
                 Container(
@@ -130,19 +131,8 @@ class _RoiWidgetState extends State<RoiWidget> {
               return roiProvider.roiRect != null
                   ? Column(
                       children: [
-                        const Text('ROI 좌표', style: TextStyle(fontSize: 16)),
-                        Text(
-                            'Left: ${roiProvider.roiRect!.left.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 16)),
-                        Text(
-                            'Top: ${roiProvider.roiRect!.top.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 16)),
-                        Text(
-                            'Right: ${roiProvider.roiRect!.right.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 16)),
-                        Text(
-                            'Bottom: ${roiProvider.roiRect!.bottom.toStringAsFixed(2)}',
-                            style: const TextStyle(fontSize: 16)),
+                        const Text('ROI 설정되지 않음',
+                            style: TextStyle(fontSize: 16))
                       ],
                     )
                   : const Text('ROI 설정되지 않음', style: TextStyle(fontSize: 16));
