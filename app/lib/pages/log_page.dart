@@ -1,9 +1,9 @@
+import 'package:app/pages/notification_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart'; // CupertinoAlertDialog를 위해 추가
 import 'package:get/get.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/components/log_list.dart';
-import 'package:app/components/drawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
 
 class LogPage extends StatefulWidget {
@@ -90,23 +90,46 @@ class _LogPageState extends State<LogPage> {
             //  ),
             //),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.delete),
-                onPressed: _showDeleteConfirmationDialog, // 다이얼로그를 호출하도록 수정
-              ),
-              Builder(
-                builder: (context) => IconButton(
-                  icon: const Icon(Icons.menu), // 추가된 메뉴 아이콘
-                  onPressed: () {
-                    Scaffold.of(context).openEndDrawer(); // endDrawer 열기
-                  },
+              SizedBox(
+                child: Stack(
+                  alignment: Alignment.topRight, // 빨간 점의 위치 조정
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications),
+                      iconSize: 32,
+                      onPressed: () {
+                        // NotificationPage로 이동
+                        Navigator.of(context).push(
+                          CupertinoPageRoute(
+                            builder: (context) => const NotificationPage(),
+                          ),
+                        );
+                      }, // 다이얼로그를 호출하도록 수정
+                    ),
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: Container(
+                        width: 9, // 빨간 점의 너비
+                        height: 9, // 빨간 점의 높이
+                        decoration: BoxDecoration(
+                          color:
+                              const Color.fromARGB(255, 255, 61, 61), // 빨간 점 색상
+                          shape: BoxShape.circle, // 원형으로 설정
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(
+                width: 5,
+              )
             ],
           ),
         ),
       ),
-      endDrawer: const DrawerWidget(),
+      // endDrawer: const DrawerWidget(),
       body: Obx(() {
         if (_logController.logs.isEmpty) {
           return const Center(child: Text('No logs available'));

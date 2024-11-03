@@ -1,6 +1,7 @@
 import 'package:app/controller/log_controller.dart';
+import 'package:app/pages/notification_page.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:app/components/drawer_widget.dart';
 import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/camera_provider.dart'; // CameraProvider import 추가
 import 'package:get/get.dart';
@@ -48,6 +49,43 @@ class User_page extends StatelessWidget {
                 //),
               ],
             ),
+            actions: [
+              SizedBox(
+                child: Stack(
+                  alignment: Alignment.topRight, // 빨간 점의 위치 조정
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.notifications),
+                      iconSize: 32,
+                      onPressed: () {
+                        // NotificationPage로 이동
+                        Navigator.of(context).push(
+                          CupertinoPageRoute(
+                            builder: (context) => const NotificationPage(),
+                          ),
+                        );
+                      }, // 다이얼로그를 호출하도록 수정
+                    ),
+                    Positioned(
+                      right: 12,
+                      top: 12,
+                      child: Container(
+                        width: 9, // 빨간 점의 너비
+                        height: 9, // 빨간 점의 높이
+                        decoration: BoxDecoration(
+                          color:
+                              const Color.fromARGB(255, 255, 61, 61), // 빨간 점 색상
+                          shape: BoxShape.circle, // 원형으로 설정
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(
+                width: 5,
+              )
+            ],
             // centerTitle: true,
             // leading: Builder(
             //   builder: (context) => IconButton(
@@ -60,7 +98,7 @@ class User_page extends StatelessWidget {
           ),
         ),
       ),
-      endDrawer: const DrawerWidget(),
+      // endDrawer: const DrawerWidget(),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
