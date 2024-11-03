@@ -74,6 +74,15 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    # camera_infos = CameraInfo.query.fliter_by(user_id=id).all()
+    # cameras = [
+    #     {
+    #         'camera_number' : camera.camera_number,
+    #         'rtsp_url': camera.rtsp_url
+    #     }
+    #     for camera in camera_infos
+    # ]
+    
     return jsonify({"message": "Login successful"}), 200
 
 # log_event 엔드포인트
@@ -302,15 +311,7 @@ def add_camera():
 
     user_id = data['user_id']
     rtsp_url = data['rtsp_url']
-
-    # 해당 user_id에 사용 가능한 가장 작은 camera_number를 찾습니다.
-    existing_cameras = CameraInfo.query.filter_by(user_id=user_id).order_by(CameraInfo.camera_number).all()
-    existing_camera_numbers = {camera.camera_number for camera in existing_cameras}
-
-    # 사용 가능한 가장 작은 camera_number 찾기
-    camera_number = 1
-    while camera_number in existing_camera_numbers:
-        camera_number += 1
+    camera_number = data['camera_number']
 
     # 새로운 카메라와 감지 상태 추가
     new_camera = CameraInfo(user_id=user_id, camera_number=camera_number, rtsp_url=rtsp_url)

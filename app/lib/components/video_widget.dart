@@ -69,8 +69,10 @@ class _VideoWidgetState extends State<VideoWidget> {
     );
   }
 
-  void _deleteCamera(int index) {
-    Provider.of<CameraProvider>(context, listen: false).deleteCamera(index);
+  void _deleteCamera(int cameraNumber) {
+    // 고유한 cameraNumber로 삭제 호출
+    Provider.of<CameraProvider>(context, listen: false)
+        .deleteCamera(cameraNumber);
   }
 
   Widget _plusVideo() {
@@ -107,12 +109,13 @@ class _VideoWidgetState extends State<VideoWidget> {
       children: [
         for (int i = 0; i < cameraProvider.rtspUrls.length; i++)
           Streaming(
-            key: ValueKey(cameraProvider.rtspUrls[i]), // 고유한 Key를 URL로 설정
+            key: ValueKey(cameraProvider.rtspUrls[i]),
             showVolumeSlider: _showVolumeSlider,
             rtspUrl: cameraProvider.rtspUrls[i],
-            cameraName: 'Camera ${i + 1}',
+            cameraName: 'Camera ${i + 1}', // 화면에 보이는 순서대로 번호 부여
             onVolumeToggle: _toggleVolumeSlider,
-            onDelete: () => _deleteCamera(i),
+            onDelete: () =>
+                _deleteCamera(cameraProvider.cameraNumbers[i]), // 실제 고유 번호로 삭제
           ),
         _plusVideo(),
       ],
