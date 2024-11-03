@@ -74,16 +74,36 @@ def login():
     if user is None or not user.check_password(password):
         return jsonify({"error": "Invalid credentials"}), 401
 
-    # camera_infos = CameraInfo.query.fliter_by(user_id=id).all()
-    # cameras = [
-    #     {
-    #         'camera_number' : camera.camera_number,
-    #         'rtsp_url': camera.rtsp_url
-    #     }
-    #     for camera in camera_infos
-    # ]
-    
-    return jsonify({"message": "Login successful"}), 200
+    camera_infos = CameraInfo.query.filter_by(user_id=id).all()
+    cameras = []
+    for camera in camera_infos:
+        detection_status = DetectionStatus.query.filter_by(user_id=id,camera_number=camera.camera_number).first()
+
+        cameras.append({
+            'camera_number': camera.camera_number,
+            'rtsp_url': camera.rtsp_url,
+            'fall_detection_on': detection_status.fall_detection_on if detection_status else False,
+            'fire_detection_on': detection_status.fire_detection_on if detection_status else False,
+            'movement_detection_on': detection_status.movement_detection_on if detection_status else False,
+            'roi_detection_on': detection_status.roi_detection_on if detection_status else False,
+            'roi': {
+                'x1': detection_status.roi_x1 if detection_status else 0,
+                'y1': detection_status.roi_y1 if detection_status else 0,
+                'x2': detection_status.roi_x2 if detection_status else 1920,
+                'y2': detection_status.roi_y2 if detection_status else 1080, 
+            }
+        })
+
+    print(cameras)
+
+
+    return jsonify({"message" : "Login successful",
+                    "cameras": cameras}), 200
+
+@bp.route('/get_max_camera_number',methods = ['GET'])
+def get_max_camera_number():
+    max_camera_number = db.session.query(db.func.max(CameraInfo.camera_number)).scalar()
+    return jsonify({"max_camera_number":max_camera_number})
 
 # log_event 엔드포인트
 @bp.route('/log_event', methods=['POST'])
@@ -257,34 +277,33 @@ def receive_event():
     # 데이터베이스에 변경 사항 커밋
     db.session.commit()
 
-    camera_infos = CameraInfo.query.filter_by(user_id=user_id).first()
-    detection_statuses = DetectionStatus.query.filter_by(user_id=user_id).first()
+    # CameraInfo에서 해당 camera_number에 맞는 정보를 가져옴
+    camera = CameraInfo.query.filter_by(user_id=user_id, camera_number=camera_number).first()
 
-    # 각 카메라별 감지 상태와 URL을 camera_info에 저장
-    camera_info = {}
-    for cam in camera_infos:
-        status = next((s for s in detection_statuses if s.camera_number == cam.camera_number), None)
-        if status:
-            camera_info[int(cam.camera_number)] = {
-                'rtsp_url': cam.rtsp_url,
-                'fall_detection_on': status.fall_detection_on,
-                'fire_detection_on': status.fire_detection_on,
-                'movement_detection_on': status.movement_detection_on,
-                'roi_detection_on': status.roi_detection_on,
+    # 모델 서버에 전송할 데이터 준비
+    if camera:
+        camera_info = {
+            camera_number: {
+                'rtsp_url': camera.rtsp_url,
+                'fall_detection_on': detection_status.fall_detection_on,
+                'fire_detection_on': detection_status.fire_detection_on,
+                'movement_detection_on': detection_status.movement_detection_on,
+                'roi_detection_on': detection_status.roi_detection_on,
                 'roi_values': {
-                    'roi_x1': status.roi_x1,
-                    'roi_y1': status.roi_y1,
-                    'roi_x2': status.roi_x2,
-                    'roi_y2': status.roi_y2
+                    'roi_x1': detection_status.roi_x1,
+                    'roi_y1': detection_status.roi_y1,
+                    'roi_x2': detection_status.roi_x2,
+                    'roi_y2': detection_status.roi_y2
                 }
             }
-
-    # 최종 payload 생성
+        }
+        
     payload = {
         'user_id': user_id,
-        'camera_id' : camera_number,
+        'camera_id': camera_number,
         'camera_info': camera_info
     }
+
 
     # 모델 서버 URL
     dl_model_ip = current_app.config['DL_MODEL_IP']

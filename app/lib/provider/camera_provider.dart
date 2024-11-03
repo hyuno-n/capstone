@@ -2,21 +2,85 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class CameraProvider extends ChangeNotifier {
   final List<String> _rtspUrls = [];
-  final List<int> _cameraNumbers = []; // 각 카메라의 고유 번호를 저장하는 리스트
+  final List<int> _cameraNumbers = [];
   int _nextCameraNumber = 1;
+  final Map<int, Map<String, dynamic>> _detectionStatus = {};
 
   List<String> get rtspUrls => _rtspUrls;
   List<int> get cameraNumbers => _cameraNumbers;
+  Map<int, Map<String, dynamic>> get detectionStatus => _detectionStatus;
+
+  CameraProvider() {
+    _loadDetectionStatus();
+  }
+
+  Future<void> _loadDetectionStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (int cameraNumber in _cameraNumbers) {
+      _detectionStatus[cameraNumber] = {
+        'Fall': prefs.getBool('camera${cameraNumber}_fallDetection') ?? false,
+        'Fire': prefs.getBool('camera${cameraNumber}_fireDetection') ?? false,
+        'Move':
+            prefs.getBool('camera${cameraNumber}_movementDetection') ?? false,
+        'Range': prefs.getBool('camera${cameraNumber}_detectionRange') ?? false,
+      };
+    }
+    notifyListeners();
+  }
+
+  // 모든 카메라의 상태를 SharedPreferences에 저장
+  Future<void> saveAllDetectionStatus() async {
+    final prefs = await SharedPreferences.getInstance();
+    for (var entry in _detectionStatus.entries) {
+      int cameraNumber = entry.key;
+      Map<String, dynamic> statuses = entry.value;
+      await prefs.setBool(
+          'camera${cameraNumber}_fallDetection', statuses['Fall'] ?? false);
+      await prefs.setBool(
+          'camera${cameraNumber}_fireDetection', statuses['Fire'] ?? false);
+      await prefs.setBool(
+          'camera${cameraNumber}_movementDetection', statuses['Move'] ?? false);
+      await prefs.setBool(
+          'camera${cameraNumber}_detectionRange', statuses['Range'] ?? false);
+    }
+  }
+
+  // 기존 코드 그대로 유지
+  Future<void> initializeCameraNumbers() async {
+    final String? flaskIp = dotenv.env['FLASK_IP'];
+    final String? flaskPort = dotenv.env['FLASK_PORT'];
+    final String url = 'http://$flaskIp:$flaskPort/get_max_camera_number';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        _nextCameraNumber = (data['max_camera_number'] ?? 0) + 1;
+        notifyListeners();
+      } else {
+        print('Failed to get max camera number: ${response.body}');
+      }
+    } catch (e) {
+      print('Error fetching max camera number: $e');
+    }
+  }
 
   Future<void> addCamera(String rtspUrl, String userId) async {
     int cameraNumber = _nextCameraNumber;
     _nextCameraNumber++;
 
-    rtspUrls.add(rtspUrl);
+    _rtspUrls.add(rtspUrl);
     _cameraNumbers.add(cameraNumber);
+    _detectionStatus[cameraNumber] = {
+      'fall_detection': false,
+      'fire_detection': false,
+      'movement_detection': false,
+      'range_detection': false,
+      'roi': {'x1': 0, 'y1': 0, 'x2': 1920, 'y2': 1080},
+    };
     notifyListeners();
 
     final String? flaskIp = dotenv.env['FLASK_IP'];
@@ -43,28 +107,46 @@ class CameraProvider extends ChangeNotifier {
     }
   }
 
-  void addCameraLocally(String rtspUrl, int cameraNumber) {
+  void addCameraLocally(
+    String rtspUrl,
+    int cameraNumber, {
+    bool fallDetection = false,
+    bool fireDetection = false,
+    bool movementDetection = false,
+    bool rangeDetection = false,
+    Map<String, int>? roi = const {'x1': 0, 'y1': 0, 'x2': 1920, 'y2': 1080},
+  }) {
     _rtspUrls.add(rtspUrl);
     _cameraNumbers.add(cameraNumber);
+    _detectionStatus[cameraNumber] = {
+      'Fall': fallDetection,
+      'Fire': fireDetection,
+      'Move': movementDetection,
+      'Range': rangeDetection,
+      'roi': roi,
+    };
     notifyListeners();
   }
 
-  // camera_number를 이용해 카메라 삭제 메서드
+  bool? getDetectionStatus(int cameraNumber, String statusKey) {
+    return _detectionStatus[cameraNumber]?[statusKey] as bool?;
+  }
+
   void deleteCamera(int cameraNumber) {
-    int index = _cameraNumbers.indexOf(cameraNumber); // cameraNumber로 인덱스 찾기
+    int index = _cameraNumbers.indexOf(cameraNumber);
     if (index != -1) {
       deleteCameraFromDatabase(cameraNumber);
 
-      // 로컬 리스트에서 해당 카메라 정보 제거
       _rtspUrls.removeAt(index);
       _cameraNumbers.removeAt(index);
+      _detectionStatus.remove(cameraNumber);
       notifyListeners();
     } else {
       print("Camera with number $cameraNumber not found.");
     }
   }
 
-  void deleteCameraFromDatabase(int cameraNumber) async {
+  Future<void> deleteCameraFromDatabase(int cameraNumber) async {
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
     final String url = 'http://$flaskIp:$flaskPort/delete_camera/$cameraNumber';
@@ -79,5 +161,30 @@ class CameraProvider extends ChangeNotifier {
     } catch (e) {
       print('Error deleting camera: $e');
     }
+  }
+
+  void updateDetectionStatus(
+    int cameraNumber,
+    String detectionType,
+    bool status,
+  ) async {
+    if (_detectionStatus[cameraNumber] != null) {
+      _detectionStatus[cameraNumber]![detectionType] = status;
+      await _saveDetectionStatus(cameraNumber); // 상태 저장
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveDetectionStatus(int cameraNumber) async {
+    final prefs = await SharedPreferences.getInstance();
+    final statuses = _detectionStatus[cameraNumber];
+    await prefs.setBool(
+        'camera${cameraNumber}_fallDetection', statuses?['Fall'] ?? false);
+    await prefs.setBool(
+        'camera${cameraNumber}_fireDetection', statuses?['Fire'] ?? false);
+    await prefs.setBool(
+        'camera${cameraNumber}_movementDetection', statuses?['Move'] ?? false);
+    await prefs.setBool(
+        'camera${cameraNumber}_detectionRange', statuses?['Range'] ?? false);
   }
 }

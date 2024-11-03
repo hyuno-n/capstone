@@ -9,6 +9,7 @@ Future<void> sendEventToFlask(
   bool roi_detection_on,
   String userId,
   Map<String, dynamic> roiValues,
+  int camera_number,
 ) async {
   final String? flaskAppIp = dotenv.env['FLASK_IP'];
   final String? flaskAppPort = dotenv.env['FLASK_PORT'];
@@ -22,6 +23,7 @@ Future<void> sendEventToFlask(
     'user_id': userId,
     'roi_detection': roi_detection_on,
     'roi_values': roiValues,
+    'camera_number': camera_number,
   };
 
   try {

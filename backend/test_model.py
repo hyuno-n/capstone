@@ -8,9 +8,8 @@ app.config['SECRET_KEY'] = 'your_secret_key'
 def event_update():
     data = request.get_json()
     
-    print(data['camera_info'].get('1'))
+    print(data['camera_info'])
     print("")
-    print(data['camera_info'].get('2'))
     print("")
     print(len(data['camera_info']))
     return jsonify({"message": "Event received by model server"}), 200

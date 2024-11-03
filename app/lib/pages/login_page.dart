@@ -51,22 +51,30 @@ class _LoginState extends State<Login> {
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> responseData = jsonDecode(response.body);
+        final Map<String, dynamic> data = jsonDecode(response.body);
 
+        // 로그인 상태 설정
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
         logController.connectSocket();
 
+        //CameraProvider에 상태 설정 및 SharedPreferences
         final cameraProvider =
             Provider.of<CameraProvider>(context, listen: false);
-        for (var camera in responseData['cameras']) {
+        for (var camera in data['cameras']) {
           cameraProvider.addCameraLocally(
             camera['rtsp_url'],
             camera['camera_number'],
+            fallDetection: camera['fall_detection_on'],
+            fireDetection: camera['fire_detection_on'],
+            movementDetection: camera['movement_detection_on'],
+            rangeDetection: camera['roi_detection_on'],
           );
         }
+
+        await cameraProvider.saveAllDetectionStatus();
 
         Navigator.pushReplacement(
           context,
