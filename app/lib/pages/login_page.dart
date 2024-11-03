@@ -56,6 +56,7 @@ class _LoginState extends State<Login> {
         // 로그인 상태 설정
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
+        userController.setEmail(data['email']);
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
         logController.connectSocket();

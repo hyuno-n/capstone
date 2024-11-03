@@ -13,7 +13,7 @@ def push_message():
         'user_id': 'inyeoung',
         'timestamp': '2024-11-04 02:55:00',
         'eventname': 'Movement',
-        'camera_number': 14,
+        'camera_number': 1,
         'eventurl' : ''
     }
 

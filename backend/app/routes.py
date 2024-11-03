@@ -97,6 +97,7 @@ def login():
 
 
     return jsonify({"message" : "Login successful",
+                    "email" : user.email,
                     "cameras": cameras}), 200
 
 @bp.route('/get_max_camera_number',methods = ['GET'])
