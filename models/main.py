@@ -12,56 +12,49 @@ import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
 
-# 현재 카메라 스레드 관리
+# 환경 변수 로드 및 전역 상수 설정
+load_dotenv()
+app = Flask(__name__)
+app.config['SECRET_KEY'] = 'your_secret_key'
+
+# 스레드 관리와 감지 상태를 위한 전역 변수
 camera_threads = {}
 detection_status = {}
 thread_lock = threading.Lock()
 
 # 스레드 풀 생성
-executor = ThreadPoolExecutor(max_workers=2)  
+executor = ThreadPoolExecutor()
 
-# 배경 제거
+# 비디오 감지 관련 설정
 bg_subtractor = cv2.createBackgroundSubtractorMOG2()
+GREEN = (0, 255, 0)
+WHITE = (255, 255, 255)
+output_width, output_height = 1920, 1080
+fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+fps = 30
+buffer_length, post_event_length = 10 * fps, 10 * fps  # 10초 버퍼와 10초 후 이벤트
 
-# Flask 서버 설정
-load_dotenv()
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'your_secret_key'
+# 모델 불러오기 (LSTM 모델과 YOLO 모델)
+lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
+yolo_model = YOLO("model/yolo11s-pose.pt")
+fire_detect_model = YOLO("model/yolo11n-fire.pt")
+classes = ['Fall', 'Normal']
+default_class = 'Normal'
+default_keypoints = np.zeros((12, 2))
 
-# AWS S3 설정
+# AWS S3 설정 (S3 저장소 및 폴더명)
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
 AWS_SECRET_ACCESS_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
 AWS_REGION_NAME = os.getenv("AWS_REGION_NAME")
 S3_BUCKET_NAME = os.getenv("S3_BUCKET_NAME")
 S3_FOLDER_NAME = "saved_clips"
 
-# 전역 상수 정의
-GREEN = (0, 255, 0)
-WHITE = (255, 255, 255)
+# 객체 추적 및 예측 상태 관리
+track_history = defaultdict(list)
+object_predictions = {}
 
-# LSTM 모델 및 YOLO 모델 불러오기
-lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
-yolo_model = YOLO("model/yolo11s-pose.pt")
-fire_detect_model = YOLO("model/yolo11n-fire.pt")
-
-# 클래스 레이블 설정 
-classes = ['Fall', 'Normal']
-
-# 기본값으로 설정할 키포인트와 클래스
-default_keypoints = np.zeros((12, 2))  # (12, 2) 형태로, 0,0으로 초기화
-default_class = 'Normal'
-
-# 출력 해상도 및 비디오 저장 설정
-output_width, output_height = 1920, 1080
-fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-fps = 30
-
-# 클립 저장을 위한 버퍼 설정
-buffer_length, post_event_length = 10 * fps, 30 * fps
-track_history, object_predictions = defaultdict(list), {}
-
-# 저장 경로 초기화
-output_dir = "saved_clips" 
+# 클립 저장을 위한 출력 디렉터리 설정
+output_dir = "saved_clips"
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
