@@ -52,7 +52,7 @@ class App extends GetView<AppController> {
               GButton(
                 icon: Icons.videocam,
                 iconSize: 34,
-                text: 'Video',
+                text: '스트리밍',
                 //icon: Icons.videocam_outlined,
                 //iconColor: Colors.black.withOpacity(0.6),
                 //text: '모니터링',
@@ -65,7 +65,7 @@ class App extends GetView<AppController> {
               ),
               GButton(
                 icon: Icons.featured_video,
-                text: 'Setting',
+                text: '감지 설정',
                 //icon: Icons.report_outlined,
                 //iconColor: Colors.black.withOpacity(0.6),
                 //text: 'AI 리포트',
@@ -78,7 +78,7 @@ class App extends GetView<AppController> {
               ),
               GButton(
                 icon: Icons.featured_play_list,
-                text: 'Log',
+                text: '로그 확인',
                 //icon: Icons.alarm_outlined,
                 //iconColor: Colors.black.withOpacity(0.6),
                 //text: '로그 확인',
@@ -91,7 +91,7 @@ class App extends GetView<AppController> {
               ),
               GButton(
                 icon: Icons.account_circle,
-                text: 'User',
+                text: '마이 페이지',
                 //icon: Icons.person_outline,
                 //iconColor: Colors.black.withOpacity(0.6),
                 //text: '마이 페이지',

@@ -102,11 +102,15 @@ class LogList extends StatelessWidget {
                   },
                   child: ListTile(
                     leading: eventIcon.isNotEmpty
-                        ? Image.asset(
-                            eventIcon,
-                            width: 55,
-                            height: 55,
-                            fit: BoxFit.contain,
+                        ? Padding(
+                            padding: const EdgeInsets.only(
+                                left: 13.0, right: 13.0), // 오른쪽 여백 추가
+                            child: Image.asset(
+                              eventIcon,
+                              width: 55,
+                              height: 55,
+                              fit: BoxFit.contain,
+                            ),
                           )
                         : null,
                     title: Column(
@@ -127,61 +131,86 @@ class LogList extends StatelessWidget {
                         )
                       ],
                     ),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            backgroundColor: Colors.white,
-                            title: const Text('Log Details'),
-                            content: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Event: ${log['eventname']}'),
-                                Text('User ID: ${log['user_id']}'),
-                                Text('Time: $formattedTimestamp'),
-                                Text('Camera: ${log['camera_number']}'),
-                                const SizedBox(height: 8),
-                                const Text('URL:'),
-                                SelectableText(
-                                  log['event_url'] ?? 'No URL available',
-                                  style: const TextStyle(color: Colors.blue),
-                                  textAlign: TextAlign.left,
-                                  maxLines: null,
-                                ),
-                              ],
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () {
-                                  DownloadAWS.downloadVideo(
-                                      log['event_url']!, context);
-                                },
-                                child: const Text('Download'),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.download),
+                          iconSize: 23,
+                          onPressed: () {
+                            DownloadAWS.downloadVideo(
+                                log['event_url']!, context);
+                          },
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.play_arrow),
+                          iconSize: 28,
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    VlcPlayerScreen(url: log['event_url']!),
                               ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => VlcPlayerScreen(
-                                          url: log['event_url']!),
-                                    ),
-                                  );
-                                },
-                                child: const Text('Play'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Navigator.of(context).pop();
-                                },
-                                child: const Text('Close'),
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    },
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    //onTap: () {
+                    //  showDialog(
+                    //    context: context,
+                    //    builder: (BuildContext context) {
+                    //      return AlertDialog(
+                    //        backgroundColor: Colors.white,
+                    //        title: const Text('Log Details'),
+                    //        content: Column(
+                    //          mainAxisSize: MainAxisSize.min,
+                    //          crossAxisAlignment: CrossAxisAlignment.start,
+                    //          children: [
+                    //            Text('Event: ${log['eventname']}'),
+                    //            Text('User ID: ${log['user_id']}'),
+                    //            Text('Time: $formattedTimestamp'),
+                    //            Text('Camera: ${log['camera_number']}'),
+                    //            const SizedBox(height: 8),
+                    //            const Text('URL:'),
+                    //            SelectableText(
+                    //              log['event_url'] ?? 'No URL available',
+                    //              style: const TextStyle(color: Colors.blue),
+                    //              textAlign: TextAlign.left,
+                    //              maxLines: null,
+                    //            ),
+                    //          ],
+                    //        ),
+                    //        actions: [
+                    //          TextButton(
+                    //            onPressed: () {
+                    //              DownloadAWS.downloadVideo(
+                    //                  log['event_url']!, context);
+                    //            },
+                    //            child: const Text('Download'),
+                    //          ),
+                    //          TextButton(
+                    //            onPressed: () {
+                    //              Navigator.of(context).push(
+                    //                MaterialPageRoute(
+                    //                  builder: (context) => VlcPlayerScreen(
+                    //                      url: log['event_url']!),
+                    //                ),
+                    //              );
+                    //            },
+                    //            child: const Text('Play'),
+                    //          ),
+                    //          TextButton(
+                    //            onPressed: () {
+                    //              Navigator.of(context).pop();
+                    //            },
+                    //            child: const Text('Close'),
+                    //          ),
+                    //        ],
+                    //      );
+                    //    },
+                    //  );
+                    //},
                   ),
                 );
               }).toList(),
