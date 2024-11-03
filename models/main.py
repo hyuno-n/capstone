@@ -73,7 +73,7 @@ class EventDetector:
         self.post_event_length = post_event_length
         self.s3_bucket_name = s3_bucket_name
         self.s3_folder_name = s3_folder_name
-        
+
         self.event_detected = False
         self.frames_after_event = 0
         self.pre_event_buffer = deque(maxlen=buffer_length)
@@ -143,7 +143,6 @@ class EventDetector:
             self.send_alert(user_id, camera_number, predicted_label, timestamp)
 
         if self.event_detected:
-            self.pre_event_buffer.append(frame)
             self.save_event_clip(predicted_label, frame, timestamp)
 
             if self.frames_after_event >= self.post_event_length:
@@ -157,9 +156,12 @@ class EventDetector:
             clip_filename = f"{event_name}_{timestamp}.mp4"
             self.local_filepath = os.path.join(self.output_dir, clip_filename)
             self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
-            frame_height, frame_width = frame.shape[:2]
-            self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (frame_width, frame_height))
-
+            try:
+                self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
+                print(f"비디오 라이터 초기화 완료: {clip_filename}")
+            except Exception as e:
+                print(f"비디오 라이터 초기화 중 오류 발생: {e}")
+                return
             buffer_size = len(self.pre_event_buffer)
             if buffer_size > 0:
                 print(f"이벤트 발생 전 {buffer_size}개의 프레임을 저장합니다.")
@@ -168,8 +170,11 @@ class EventDetector:
             else:
                 print("이벤트 발생 전 저장할 프레임이 충분하지 않습니다.")
 
-        self.out.write(frame)
-        self.frames_written += 1
+        try:
+            self.out.write(frame)
+            self.frames_written += 1
+        except Exception as e:
+            print(f"프레임 쓰기 중 오류 발생: {e}")
 
         # 이벤트 후 클립 저장이 완료되면 S3에 업로드
         if self.frames_written >= self.post_event_length:
@@ -271,7 +276,7 @@ def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
     
-def process_video(user_id, camera_id, rtsp_url, camera_settings):
+def process_video(user_id, camera_id, rtsp_url):
     """비디오 프로세싱 메인 루프"""
 
     print(f"Thread started for camera {camera_id}.")
@@ -280,29 +285,24 @@ def process_video(user_id, camera_id, rtsp_url, camera_settings):
         print(f"Unable to open camera {camera_id}.")
         return
     
-    # 카메라 설정 로드
-    roi_apply_signal = camera_settings.get('roi_detection_on', False)
-    roi_x1 = camera_settings['roi_values'].get('roi_x1', 0)
-    roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
-    roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
-    roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
-    
     # 이벤트 감지 객체 생성
     event_detector = EventDetector(output_dir, fourcc, fps, post_event_length, S3_BUCKET_NAME, S3_FOLDER_NAME)
-
+    
     while cap.isOpened():
         success, frame = cap.read()
         if not success:
             print(f"Camera {camera_id} stream ended.")
             break
-
+        camera_settings = detection_status[user_id]['camera_info'][camera_id]
+    
+        # 카메라 설정 로드
+        roi_apply_signal = camera_settings.get('roi_detection_on', False)
         roi_x1 = camera_settings['roi_values'].get('roi_x1', 0)
         roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
         roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
         roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
-
+        
         frame = cv2.resize(frame, (output_width, output_height), interpolation=cv2.INTER_CUBIC)
-        print(f"Frame shape: {frame.shape}")
 
         if roi_apply_signal:
             draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
@@ -358,6 +358,9 @@ def process_video(user_id, camera_id, rtsp_url, camera_settings):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
 
+        # 프레임을 계속해서 버퍼에 저장
+        event_detector.pre_event_buffer.append(frame)
+
         cv2.imshow(f'Video {camera_id}', frame)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
@@ -402,7 +405,7 @@ def add_camera():
         camera_threads[user_id] = {}  # 새로운 사용자 ID 생성
 
     # 카메라 ID별로 쓰레드를 시작하여 사용자별로 저장
-    thread = threading.Thread(target=process_video, args=(user_id, camera_id, rtsp_url, camera_settings))
+    thread = threading.Thread(target=process_video, args=(user_id, camera_id, rtsp_url))
     camera_threads[user_id][camera_id] = thread  # 사용자 ID별 카메라 ID에 쓰레드 저장
     thread.start()
     
@@ -448,9 +451,9 @@ def event_update():
         # 카메라에 대한 스레드 실행
         rtsp_url = camera_data.get('rtsp_url')
         if rtsp_url:  # RTSP URL이 존재할 경우에만 스레드 시작
-            if camera_id not in camera_threads:  # 스레드가 존재하지 않을 경우
+            if camera_id not in camera_threads[user_id]:  # 스레드가 존재하지 않을 경우
                 print(f"Starting thread for {camera_id} with RTSP URL: {rtsp_url}")
-                thread = threading.Thread(target=process_video, args=(user_id, camera_id, rtsp_url, camera_data))
+                thread = threading.Thread(target=process_video, args=(user_id, camera_id, rtsp_url))
                 camera_threads[user_id][camera_id] = thread  # 스레드를 딕셔너리에 추가
                 thread.start()  # 스레드 시작
 
@@ -489,7 +492,7 @@ def remove_camera():
     print(f"Removing camera: {camera_id} for user: {user_id}")
 
     # 스레드 종료
-    if camera_id in camera_threads:
+    if camera_id in camera_threads[user_id]:
         camera_threads[user_id][camera_id].join()  # 해당 카메라의 스레드 종료
         del camera_threads[user_id][camera_id]  # 스레드 딕셔너리에서 제거
 
