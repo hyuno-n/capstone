@@ -60,7 +60,7 @@ fps = 30
 buffer_length, post_event_length = 10 * fps, 30 * fps
 track_history, object_predictions = defaultdict(list), {}
 
-# 탐지 기능 온오프 설정 및 저장 경로 초기화
+# 저장 경로 초기화
 output_dir = "saved_clips" 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
@@ -157,7 +157,7 @@ class EventDetector:
             clip_filename = f"{event_name}_{timestamp}.mp4"
             self.local_filepath = os.path.join(self.output_dir, clip_filename)
             self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
-            frame_width, frame_height = frame.shape[:2]
+            frame_height, frame_width = frame.shape[:2]
             self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (frame_width, frame_height))
 
             buffer_size = len(self.pre_event_buffer)
@@ -217,7 +217,7 @@ def detect_people_and_keypoints(frame):
     
     return keypoints_list, boxes, track_ids
 
-def detect_movement(frame, min_contour_area = 10000):
+def detect_movement(frame, min_contour_area=10000):
     """영상처리를 이용한 움직임 감지"""
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
@@ -225,13 +225,22 @@ def detect_movement(frame, min_contour_area = 10000):
     contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     motion_detected = False
+    largest_contour = None
+    largest_area = 0
+
+    # 모든 컨투어를 순회하며 가장 큰 컨투어를 찾기
     for contour in contours:
         area = cv2.contourArea(contour)
-        if area > min_contour_area:
-            x, y, w, h = cv2.boundingRect(contour)
-            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            motion_detected = True
-            
+        if area > min_contour_area and area > largest_area:
+            largest_area = area
+            largest_contour = contour
+
+    # 가장 큰 컨투어가 있을 경우 박스를 그리기
+    if largest_contour is not None:
+        x, y, w, h = cv2.boundingRect(largest_contour)
+        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        motion_detected = True
+
     return frame, motion_detected
 
 def update_track_history(boxes, track_ids):
@@ -264,13 +273,23 @@ def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
     
 def process_video(user_id, camera_id, rtsp_url, camera_settings):
     """비디오 프로세싱 메인 루프"""
+
     print(f"Thread started for camera {camera_id}.")
     cap = cv2.VideoCapture(rtsp_url)
     if not cap.isOpened():
         print(f"Unable to open camera {camera_id}.")
         return
+    
+    # 카메라 설정 로드
     roi_apply_signal = camera_settings.get('roi_detection_on', False)
+    roi_x1 = camera_settings['roi_values'].get('roi_x1', 0)
+    roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
+    roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
+    roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
+    
+    # 이벤트 감지 객체 생성
     event_detector = EventDetector(output_dir, fourcc, fps, post_event_length, S3_BUCKET_NAME, S3_FOLDER_NAME)
+
     while cap.isOpened():
         success, frame = cap.read()
         if not success:

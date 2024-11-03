@@ -72,7 +72,7 @@ plt.legend()
 plt.title('Accuracy over Epochs')
 
 # 이미지 저장
-plt.savefig('lstm_11633__history.png')
+plt.savefig('lstm_11633_history.png')
 
 # 이미지 표시
 plt.show()
