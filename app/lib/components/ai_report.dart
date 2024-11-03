@@ -157,6 +157,9 @@ class _AiReportState extends State<AiReport> {
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         SizedBox(
+          height: 10,
+        ),
+        SizedBox(
           height: 190,
           child: ListView(
             scrollDirection: Axis.horizontal,
@@ -210,7 +213,7 @@ class _AiReportState extends State<AiReport> {
         color: value ? Colors.grey[900] : Colors.grey[100],
         borderRadius: BorderRadius.circular(24),
       ),
-      margin: EdgeInsets.symmetric(horizontal: 8),
+      margin: EdgeInsets.only(right: 16),
       padding: EdgeInsets.symmetric(vertical: 25),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -271,8 +274,20 @@ class _AiReportState extends State<AiReport> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 20),
-                        Text('Welcome Setting,'),
-                        Text("PICK CAMERA", style: TextStyle(fontSize: 32)),
+                        const Text(
+                          '원하는 감지 설정을',
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Text(
+                          "선택해주세요",
+                          style: TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                         const SizedBox(height: 20),
                         ...List.generate(cameraProvider.rtspUrls.length,
                             (index) {
