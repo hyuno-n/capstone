@@ -5,16 +5,24 @@ import 'dart:convert';
 
 class CameraProvider extends ChangeNotifier {
   final List<String> _rtspUrls = [];
+  final List<int> _cameraNumbers = []; // 각 카메라의 고유 번호를 저장하는 리스트
+  int _nextCameraNumber = 1;
 
   List<String> get rtspUrls => _rtspUrls;
-  Future<void> addCamera(String rtspUrl, String userId) async {
-    _rtspUrls.add(rtspUrl);
-    notifyListeners(); // UI에 변경 사항 알림
+  List<int> get cameraNumbers => _cameraNumbers;
 
-    // 데이터베이스에 카메라 추가 요청
+  Future<void> addCamera(String rtspUrl, String userId) async {
+    int cameraNumber = _nextCameraNumber;
+    _nextCameraNumber++;
+
+    rtspUrls.add(rtspUrl);
+    _cameraNumbers.add(cameraNumber);
+    notifyListeners();
+
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
-    final String url = 'http://$flaskIp:$flaskPort/add_camera'; // 적절한 엔드포인트로 변경
+    final String url = 'http://$flaskIp:$flaskPort/add_camera';
+
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -22,6 +30,7 @@ class CameraProvider extends ChangeNotifier {
         body: jsonEncode({
           'user_id': userId,
           'rtsp_url': rtspUrl,
+          'camera_number': cameraNumber
         }),
       );
       if (response.statusCode == 200) {
@@ -34,13 +43,24 @@ class CameraProvider extends ChangeNotifier {
     }
   }
 
-  // 카메라 삭제 메서드
-  void deleteCamera(int index) {
-    if (index >= 0 && index < _rtspUrls.length) {
-      // 서버에 카메라 삭제 요청
-      deleteCameraFromDatabase(index + 1);
+  void addCameraLocally(String rtspUrl, int cameraNumber) {
+    _rtspUrls.add(rtspUrl);
+    _cameraNumbers.add(cameraNumber);
+    notifyListeners();
+  }
+
+  // camera_number를 이용해 카메라 삭제 메서드
+  void deleteCamera(int cameraNumber) {
+    int index = _cameraNumbers.indexOf(cameraNumber); // cameraNumber로 인덱스 찾기
+    if (index != -1) {
+      deleteCameraFromDatabase(cameraNumber);
+
+      // 로컬 리스트에서 해당 카메라 정보 제거
       _rtspUrls.removeAt(index);
+      _cameraNumbers.removeAt(index);
       notifyListeners();
+    } else {
+      print("Camera with number $cameraNumber not found.");
     }
   }
 

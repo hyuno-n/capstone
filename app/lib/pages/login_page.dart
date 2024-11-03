@@ -1,3 +1,4 @@
+import 'package:app/provider/camera_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:app/pages/sign_up_page.dart';
@@ -7,6 +8,7 @@ import 'package:app/controller/log_controller.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:provider/provider.dart';
 
 class Login_Page extends StatelessWidget {
   const Login_Page({super.key});
@@ -49,12 +51,22 @@ class _LoginState extends State<Login> {
       );
 
       if (response.statusCode == 200) {
+        final Map<String, dynamic> responseData = jsonDecode(response.body);
+
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
-
         logController.connectSocket();
+
+        final cameraProvider =
+            Provider.of<CameraProvider>(context, listen: false);
+        for (var camera in responseData['cameras']) {
+          cameraProvider.addCameraLocally(
+            camera['rtsp_url'],
+            camera['camera_number'],
+          );
+        }
 
         Navigator.pushReplacement(
           context,
