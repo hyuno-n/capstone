@@ -1,5 +1,7 @@
+import 'dart:math';
 import 'package:app/components/roi_widget.dart';
 import 'package:app/provider/roi_provider.dart';
+import 'package:app/provider/camera_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -16,10 +18,8 @@ class AiReport extends StatefulWidget {
 }
 
 class _AiReportState extends State<AiReport> {
-  bool isFallDetectionOn = false;
-  bool isFireDetectionOn = false;
-  bool isMovementDetectionOn = false;
-  bool isDetectionRangeOn = false;
+  // 카메라별 설정 상태 리스트
+  List<Map<String, bool>> cameraSettings = [];
 
   @override
   void initState() {
@@ -27,68 +27,91 @@ class _AiReportState extends State<AiReport> {
     _loadSwitchStates();
   }
 
+  // 카메라별 설정 상태 로드
   Future<void> _loadSwitchStates() async {
     final prefs = await SharedPreferences.getInstance();
-    if (!mounted) return;
-    setState(() {
-      isFallDetectionOn = prefs.getBool('fallDetection') ?? false;
-      isFireDetectionOn = prefs.getBool('fireDetection') ?? false;
-      isMovementDetectionOn = prefs.getBool('movementDetection') ?? false;
-      isDetectionRangeOn = prefs.getBool('detectionRange') ?? false;
+    final cameraCount =
+        Provider.of<CameraProvider>(context, listen: false).rtspUrls.length;
 
-      // ROI 감지 범위 스위치가 꺼져있다면 초기화
-      if (!isDetectionRangeOn) {
+    setState(() {
+      cameraSettings = List.generate(cameraCount, (index) {
+        return {
+          'Fall': prefs.getBool('camera${index + 1}_fallDetection') ?? false,
+          'Fire': prefs.getBool('camera${index + 1}_fireDetection') ?? false,
+          'Move':
+              prefs.getBool('camera${index + 1}_movementDetection') ?? false,
+          'Range': prefs.getBool('camera${index + 1}_detectionRange') ?? false,
+        };
+      });
+    });
+  }
+
+  Future<void> _saveSwitchState(int cameraIndex, String key, bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setBool('camera${cameraIndex + 1}_$key', value);
+  }
+
+  void _onSettingChanged(int cameraIndex, String setting, bool value) {
+    // Fall, Fire, Move 설정 변경 시 다이얼로그 표시
+    if (value &&
+        (setting == 'Fall' || setting == 'Fire' || setting == 'Move')) {
+      _showConfirmationDialog(cameraIndex, setting, value);
+    } else if (setting == 'Range') {
+      _onDetectionRangeChanged(cameraIndex, value);
+    } else {
+      // 직접 설정 상태 업데이트
+      setState(() {
+        cameraSettings[cameraIndex][setting] = value;
+        _saveSwitchState(cameraIndex, setting, value);
+        _updateDetectionStates(cameraIndex);
+
+        // 디버그 콘솔에 카메라 번호와 설정 변경 상태 출력
+        if (value) {
+          print("Camera${cameraIndex + 1}번 $setting on");
+        } else {
+          print("Camera${cameraIndex + 1}번 $setting off");
+        }
+      });
+    }
+  }
+
+  void _onDetectionRangeChanged(int cameraIndex, bool value) {
+    setState(() {
+      cameraSettings[cameraIndex]['Range'] = value;
+      _saveSwitchState(cameraIndex, 'Range', value);
+
+      // 감지 범위 설정이 켜질 경우 바로 RoiWidget으로 이동
+      if (value) {
+        Navigator.push(
+          context,
+          CupertinoPageRoute(
+            builder: (context) => RoiWidget(
+              selectedCameraIndex: cameraIndex, // 선택한 카메라 인덱스 전달
+              onRoiSelected: (roi) {
+                Provider.of<RoiProvider>(context, listen: false).updateRoi(roi);
+                _updateDetectionStates(cameraIndex);
+              },
+              onCompletion: (bool success) {
+                setState(() {
+                  cameraSettings[cameraIndex]['Range'] = success;
+                  _saveSwitchState(cameraIndex, 'Range', success);
+                });
+              },
+            ),
+          ),
+        );
+      } else {
         Provider.of<RoiProvider>(context, listen: false).resetRoi();
+        _updateDetectionStates(cameraIndex);
       }
     });
   }
 
-  Future<void> _saveSwitchState(String key, bool value) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setBool(key, value);
-  }
-
-  void _onFallDetectionChanged(bool value) {
-    if (value) {
-      _showConfirmationDialog(value, true);
-    } else {
-      setState(() {
-        isFallDetectionOn = value;
-        _saveSwitchState('fallDetection', value);
-        _updateAllDetectionStates();
-      });
-    }
-  }
-
-  void _onFireDetectionChanged(bool value) {
-    if (value) {
-      _showConfirmationDialog(value, false);
-    } else {
-      setState(() {
-        isFireDetectionOn = value;
-        _saveSwitchState('fireDetection', value);
-        _updateAllDetectionStates();
-      });
-    }
-  }
-
-  void _onMovementDetectionChanged(bool value) {
-    if (value) {
-      _showConfirmationDialog(value, null);
-    } else {
-      setState(() {
-        isMovementDetectionOn = value;
-        _saveSwitchState('movementDetection', value);
-        _updateAllDetectionStates();
-      });
-    }
-  }
-
-  void _showConfirmationDialog(bool value, bool? isFallOrFire) {
+  void _showConfirmationDialog(int cameraIndex, String setting, bool value) {
     String message;
-    if (isFallOrFire == true) {
+    if (setting == 'Fall') {
       message = "넘어짐 감지를 활성화하시겠습니까?";
-    } else if (isFallOrFire == false) {
+    } else if (setting == 'Fire') {
       message = "화재 감지를 활성화하시겠습니까?";
     } else {
       message = "움직임 감지를 활성화하시겠습니까?";
@@ -111,17 +134,11 @@ class _AiReportState extends State<AiReport> {
               child: const Text("확인"),
               onPressed: () {
                 setState(() {
-                  if (isFallOrFire == true) {
-                    isFallDetectionOn = true;
-                    _saveSwitchState('fallDetection', true);
-                  } else if (isFallOrFire == false) {
-                    isFireDetectionOn = true;
-                    _saveSwitchState('fireDetection', true);
-                  } else {
-                    isMovementDetectionOn = true;
-                    _saveSwitchState('movementDetection', true);
-                  }
-                  _updateAllDetectionStates();
+                  cameraSettings[cameraIndex][setting] = value;
+                  _saveSwitchState(cameraIndex, setting, value);
+                  _updateDetectionStates(cameraIndex);
+                  // 디버그 콘솔에 카메라 번호와 설정 변경 상태 출력
+                  print("Camera${cameraIndex + 1}번 $setting on");
                 });
                 Navigator.of(context).pop();
               },
@@ -132,222 +149,157 @@ class _AiReportState extends State<AiReport> {
     );
   }
 
-  void _updateAllDetectionStates() {
+  void _updateDetectionStates(int cameraIndex) {
     final roiProvider = Provider.of<RoiProvider>(context, listen: false);
-    final roiValues = roiProvider.getRoiValues(); // ROI 값을 가져옴
+    final userController = Get.find<UserController>();
+    final currentUserId = userController.getUserId;
 
-    // 현재 로그인한 사용자 ID를 가져오기
-    final userController =
-        Get.find<UserController>(); // UserController 인스턴스 가져오기
-    String currentUserId = userController.getUserId; // 사용자 ID 가져오기
-
+    // 카메라별 설정 상태 업데이트 로직
     sendEventToFlask(
-      isFallDetectionOn,
-      isFireDetectionOn,
-      isMovementDetectionOn,
-      isDetectionRangeOn,
+      cameraSettings[cameraIndex]['Fall']!,
+      cameraSettings[cameraIndex]['Fire']!,
+      cameraSettings[cameraIndex]['Move']!,
+      cameraSettings[cameraIndex]['Range']!,
       currentUserId,
-      roiValues,
+      roiProvider.getRoiValues(),
     );
   }
 
-  void _onDetectionRangeChanged(bool value) {
-    setState(() {
-      isDetectionRangeOn = value;
-      _saveSwitchState('detectionRange', value);
+  Widget _buildCameraSettings(int cameraIndex) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Camera ${cameraIndex + 1}',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+        SizedBox(
+          height: 190,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            children: [
+              _buildDetectionBox(
+                cameraIndex: cameraIndex,
+                setting: 'Fall',
+                title: 'Fall',
+                icon: 'assets/images/setting_fall.png',
+              ),
+              _buildDetectionBox(
+                cameraIndex: cameraIndex,
+                setting: 'Fire',
+                title: 'Fire',
+                icon: 'assets/images/setting_fire.png',
+              ),
+              _buildDetectionBox(
+                cameraIndex: cameraIndex,
+                setting: 'Move',
+                title: 'Move',
+                icon: 'assets/images/setting_move.png',
+              ),
+              _buildDetectionBox(
+                cameraIndex: cameraIndex,
+                setting: 'Range',
+                title: 'Range',
+                icon: 'assets/images/setting_range.png',
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 25),
+      ],
+    );
+  }
 
-      // 감지 범위 스위치가 꺼질 때 ROI 좌표 초기화
-      if (!value) {
-        Provider.of<RoiProvider>(context, listen: false).resetRoi();
-        _updateAllDetectionStates();
-        print("ROI 좌표값이 초기화되었습니다.");
-      }
-    });
+  Widget _buildDetectionBox({
+    required int cameraIndex,
+    required String setting,
+    required String title,
+    required String icon,
+  }) {
+    double fontSize = (setting == 'Range') ? 18.4 : 20.0; // Range의 폰트 크기 조정
+    return Container(
+      width: 140,
+      decoration: BoxDecoration(
+          color: cameraSettings[cameraIndex][setting] ?? false
+              ? Colors.grey[900]
+              : Colors.grey[100],
+          borderRadius: BorderRadius.circular(24)),
+      margin: EdgeInsets.symmetric(horizontal: 8),
+      padding: EdgeInsets.symmetric(vertical: 25),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Image.asset(icon,
+              width: 52,
+              height: 52,
+              color: cameraSettings[cameraIndex][setting]!
+                  ? Colors.white
+                  : Colors.black),
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 25.0),
+                  child: Text(
+                    title,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: fontSize,
+                        color: cameraSettings[cameraIndex][setting]!
+                            ? Colors.white
+                            : Colors.black),
+                  ),
+                ),
+              ),
+              Transform.rotate(
+                angle: pi / 2,
+                child: CupertinoSwitch(
+                  value: cameraSettings[cameraIndex][setting] ?? false,
+                  onChanged: (bool value) {
+                    _onSettingChanged(cameraIndex, setting, value);
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 넘어짐 감지
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      body: Consumer<CameraProvider>(
+        builder: (context, cameraProvider, child) {
+          return SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 25),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      Image.asset(
-                        isFallDetectionOn
-                            ? 'assets/images/fall_detection_on.gif'
-                            : 'assets/images/fall_detection.gif',
-                        width: 50,
-                        height: 50,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "넘어짐 감지",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                  CupertinoSwitch(
-                    value: isFallDetectionOn,
-                    onChanged: _onFallDetectionChanged,
-                  ),
+                  const SizedBox(height: 20),
+                  Text('Welcome Setting,'),
+                  Text("PICK CAMERA", style: TextStyle(fontSize: 32)),
+                  const SizedBox(height: 20),
+                  ...List.generate(cameraProvider.rtspUrls.length, (index) {
+                    if (cameraSettings.length <
+                        cameraProvider.rtspUrls.length) {
+                      cameraSettings.add({
+                        'Fall': false,
+                        'Fire': false,
+                        'Move': false,
+                        'Range': false,
+                      });
+                    }
+                    return _buildCameraSettings(index);
+                  }),
                 ],
               ),
-              const SizedBox(height: 20),
-
-              // 화재 감지
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset(
-                        isFireDetectionOn
-                            ? 'assets/images/fire_detection_on.gif'
-                            : 'assets/images/fire_detection.gif',
-                        width: 50,
-                        height: 50,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "화재 감지",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                  CupertinoSwitch(
-                    value: isFireDetectionOn,
-                    onChanged: _onFireDetectionChanged,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              // 움직임 감지 추가
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset(
-                        isMovementDetectionOn
-                            ? 'assets/images/movement_on.gif'
-                            : 'assets/images/movement.gif',
-                        width: 50,
-                        height: 50,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "움직임 감지",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                  CupertinoSwitch(
-                    value: isMovementDetectionOn,
-                    onChanged: _onMovementDetectionChanged,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-
-              Container(
-                height: 0.3,
-                color: Colors.grey,
-              ),
-              const SizedBox(height: 20),
-
-              // 감지 범위 설정
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      Image.asset(
-                        isDetectionRangeOn
-                            ? 'assets/images/range_detection_set_on.gif'
-                            : 'assets/images/range_detection_set.gif',
-                        width: 50,
-                        height: 50,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        "감지 범위 설정",
-                        style: TextStyle(fontSize: 18),
-                      ),
-                    ],
-                  ),
-                  CupertinoSwitch(
-                    value: isDetectionRangeOn,
-                    onChanged: _onDetectionRangeChanged,
-                  ),
-                ],
-              ),
-
-              // ROI 설정하기 CupertinoButton 추가
-              if (isDetectionRangeOn)
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16.0),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            SizedBox(width: 3),
-                            Image(
-                              image:
-                                  AssetImage('assets/images/resize_icon.gif'),
-                              width: 42,
-                              height: 42,
-                            ),
-                            SizedBox(width: 14),
-                            Text(
-                              "ROI 설정하기",
-                              style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w400),
-                            ),
-                          ],
-                        ),
-                        Icon(
-                          CupertinoIcons.forward,
-                          color: Colors.black,
-                        ),
-                      ],
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      CupertinoPageRoute(
-                        builder: (context) => RoiWidget(
-                          onRoiSelected: (roi) {
-                            // ROI 값을 전달받아 저장하는 로직 추가
-                            Provider.of<RoiProvider>(context, listen: false)
-                                .updateRoi(roi);
-                            _updateAllDetectionStates();
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                ),
-
-              const SizedBox(height: 20),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

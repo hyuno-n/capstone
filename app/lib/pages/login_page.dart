@@ -140,7 +140,7 @@ class _LoginState extends State<Login> {
                 ),
                 const SizedBox(height: 10),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 51.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 40.0),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
@@ -187,7 +187,9 @@ class _LoginState extends State<Login> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => const SignUpPage()),
+                            builder: (context) =>
+                                const SignUpPage(), // !!여기 원래 SignUpPage 이거 들어가야함!!
+                          ),
                         );
                       },
                       child: Text(
