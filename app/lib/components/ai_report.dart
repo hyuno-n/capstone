@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:app/components/loading_indicator.dart';
 import 'package:app/components/roi_widget.dart';
 import 'package:app/provider/roi_provider.dart';
 import 'package:app/provider/camera_provider.dart';
@@ -16,18 +17,56 @@ class AiReport extends StatefulWidget {
   _AiReportState createState() => _AiReportState();
 }
 
-class _AiReportState extends State<AiReport> {
+class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
   Future<void>? _cameraInitialization;
+  late AnimationController _controller;
+  late Animation<Offset> _animation;
 
   @override
   void initState() {
     super.initState();
     _cameraInitialization = _initializeSettings();
+
+    // 애니메이션 컨트롤러 초기화
+    _controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _animation = Tween<Offset>(
+      begin: Offset(0, 0.2),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(
+      parent: _controller,
+      curve: Curves.easeOut,
+    ));
+
+    // 애니메이션 시작
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // 위젯이 여전히 활성 상태인지 확인
+        _controller.forward();
+      }
+    });
   }
 
   Future<void> _initializeSettings() async {
     final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
     await cameraProvider.initializeCameraNumbers();
+  }
+
+  @override
+  void dispose() {
+    // 애니메이션이 진행 중이면 정지
+    if (_controller.isAnimating) {
+      _controller.stop();
+    }
+
+    // 애니메이션 컨트롤러 파기
+    _controller.dispose();
+
+    // 상위 클래스 dispose 호출
+    super.dispose();
   }
 
   Future<void> _saveSwitchState(
@@ -253,12 +292,35 @@ class _AiReportState extends State<AiReport> {
         future: _cameraInitialization,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return Center(child: LoadingIndicator()); //로딩 중일 때 표시
           } else if (snapshot.hasError) {
             return Center(child: Text("오류 발생: ${snapshot.error}"));
           } else {
             return Consumer<CameraProvider>(
               builder: (context, cameraProvider, child) {
+                if (cameraProvider.rtspUrls.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SlideTransition(
+                          position: _animation,
+                          child: Image.asset(
+                            'assets/images/no_camera_icon.png',
+                            width: 300,
+                            height: 300,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        const Text(
+                          '카메라를 추가해주세요',
+                          style: TextStyle(fontSize: 20, color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
                 return SingleChildScrollView(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 25),

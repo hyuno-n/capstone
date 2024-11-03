@@ -1,7 +1,10 @@
+import 'package:app/controller/log_controller.dart';
 import 'package:app/pages/notification_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/ai_report.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 
 // Ai report 페이지 App에서 -> 이 페이지로 넘겨옴 <Ai report main page>
 
@@ -10,6 +13,7 @@ class AiReportPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final logController = Get.find<LogController>();
     return Scaffold(
       backgroundColor: Colors.white, // 배경색을 흰색으로 설정
       appBar: PreferredSize(
@@ -40,33 +44,37 @@ class AiReportPage extends StatelessWidget {
             actions: [
               SizedBox(
                 child: Stack(
-                  alignment: Alignment.topRight, // 빨간 점의 위치 조정
+                  alignment: Alignment.topRight,
                   children: [
                     IconButton(
                       icon: const Icon(Icons.notifications),
                       iconSize: 32,
                       onPressed: () {
-                        // NotificationPage로 이동
+                        logController
+                            .resetNotificationCount(); // 알림 페이지로 가기 전에 알림 수 리셋
                         Navigator.of(context).push(
                           CupertinoPageRoute(
                             builder: (context) => const NotificationPage(),
                           ),
                         );
-                      }, // 다이얼로그를 호출하도록 수정
+                      },
                     ),
-                    Positioned(
-                      right: 12,
-                      top: 12,
-                      child: Container(
-                        width: 9, // 빨간 점의 너비
-                        height: 9, // 빨간 점의 높이
-                        decoration: BoxDecoration(
-                          color:
-                              const Color.fromARGB(255, 255, 61, 61), // 빨간 점 색상
-                          shape: BoxShape.circle, // 원형으로 설정
-                        ),
-                      ),
-                    ),
+                    Obx(() {
+                      return logController.newNotificationCount.value > 0
+                          ? Positioned(
+                              right: 12,
+                              top: 12,
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 255, 61, 61),
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            )
+                          : Container(); // 알림이 없으면 빈 컨테이너 반환
+                    }),
                   ],
                 ),
               ),
