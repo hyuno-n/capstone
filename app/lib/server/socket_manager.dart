@@ -49,8 +49,8 @@ class SocketManager {
         String eventname = data['eventname'] ?? "New Event";
         String cameraNumber = data['camera_number']?.toString() ?? "N/A";
 
-        String title = "$eventname 발생!";
-        String message = "camera_number: $cameraNumber";
+        String title = "MVCCTV";
+        String message = "📷camera$cameraNumber에서 $eventname이 발생하였습니다.";
 
         notificationManager.showNotification(title, message);
         logController.fetchLogs(userId);
