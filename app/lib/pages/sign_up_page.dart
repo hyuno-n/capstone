@@ -139,7 +139,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
           child: Column(
             children: [
               Text(
-                'Welcome to MVCCTV!',
+                'Let\'s create an account for you',
                 style: TextStyle(fontSize: 18, color: Colors.grey[700]),
               )
             ],

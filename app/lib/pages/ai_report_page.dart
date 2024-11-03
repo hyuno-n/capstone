@@ -19,7 +19,7 @@ class AiReportPage extends StatelessWidget {
             boxShadow: [
               BoxShadow(
                 color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                spreadRadius: 1, // 그림자의 퍼짐 반경
+                spreadRadius: 0.1, // 그림자의 퍼짐 반경
                 blurRadius: 5, // 그림자 블러 정도
                 offset: const Offset(0, 2), // 그림자의 위치 (아래쪽)
               ),

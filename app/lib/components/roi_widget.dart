@@ -7,24 +7,35 @@ import 'package:app/provider/camera_provider.dart';
 import 'package:app/controller/roi_controller.dart';
 
 class RoiWidget extends StatefulWidget {
-  final Function(Rect) onRoiSelected; // ROI 선택 시 호출될 콜백 추가
+  final Function(Rect) onRoiSelected;
+  final Function(bool) onCompletion;
+  final int selectedCameraIndex; // 선택된 카메라 인덱스 추가
 
-  const RoiWidget({super.key, required this.onRoiSelected});
+  const RoiWidget({
+    super.key,
+    required this.onRoiSelected,
+    required this.onCompletion,
+    required this.selectedCameraIndex, // 인덱스 받기
+  });
 
   @override
   _RoiWidgetState createState() => _RoiWidgetState();
 }
 
 class _RoiWidgetState extends State<RoiWidget> {
-  int? _selectedCameraIndex;
   late VlcPlayerController _vlcViewController;
-  Rect? _tempRoi; // 임시 ROI 저장 변수
+  Rect? _tempRoi;
 
   @override
   void initState() {
     super.initState();
+
+    // 선택된 카메라 URL 가져와 초기화
+    final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
+    String selectedUrl = cameraProvider.rtspUrls[widget.selectedCameraIndex];
+
     _vlcViewController = VlcPlayerController.network(
-      '',
+      selectedUrl,
       options: VlcPlayerOptions(),
     );
   }
@@ -35,13 +46,10 @@ class _RoiWidgetState extends State<RoiWidget> {
     super.dispose();
   }
 
-  void _setCameraUrl(String url) {
-    _vlcViewController.setMediaFromNetwork(url);
-  }
-
   void _saveRoi() {
     if (_tempRoi != null) {
-      widget.onRoiSelected(_tempRoi!); // ROI 값을 AiReport에 전달
+      widget.onRoiSelected(_tempRoi!);
+      widget.onCompletion(true);
     }
   }
 
@@ -54,12 +62,26 @@ class _RoiWidgetState extends State<RoiWidget> {
       backgroundColor: Colors.white,
       navigationBar: CupertinoNavigationBar(
         backgroundColor: Colors.white,
+        leading: GestureDetector(
+          onTap: () {
+            widget.onCompletion(false);
+            Navigator.pop(context);
+          },
+          child: const Icon(
+            CupertinoIcons.back,
+            size: 24,
+          ),
+        ),
         middle: const Text('ROI 설정'),
         trailing: CupertinoButton(
           padding: const EdgeInsets.all(0.0),
-          child: const Text('완료'),
+          child: const Text(
+            '완료',
+            style: TextStyle(
+                color: Colors.black, fontSize: 17, fontWeight: FontWeight.bold),
+          ),
           onPressed: () {
-            _saveRoi(); // ROI 저장 및 전달
+            _saveRoi();
             Navigator.pop(context);
           },
         ),
@@ -68,56 +90,28 @@ class _RoiWidgetState extends State<RoiWidget> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // 카메라 선택 메뉴 버튼
-            Consumer<CameraProvider>(builder: (context, cameraProvider, child) {
-              return PopupMenuButton<int>(
-                onSelected: (index) {
-                  setState(() {
-                    _selectedCameraIndex = index;
-                    String selectedUrl = cameraProvider.rtspUrls[index];
-
-                    if (selectedUrl.isNotEmpty) {
-                      _setCameraUrl(selectedUrl);
-                    } else {
-                      print("Error: Provided URL is empty.");
-                    }
-                  });
-                },
-                icon: const Icon(Icons.camera_alt, color: Colors.blue),
-                itemBuilder: (BuildContext context) {
-                  return List.generate(
-                    cameraProvider.rtspUrls.length,
-                    (index) => PopupMenuItem<int>(
-                      value: index,
-                      child: Text('Camera ${index + 1}'),
-                    ),
-                  );
-                },
-              );
-            }),
             const SizedBox(height: 20),
 
             // 배경에 스트리밍 영상과 ROI 설정 겹치기
             Stack(
               children: [
-                if (_selectedCameraIndex != null)
-                  Container(
-                    width: boxWidth,
-                    height: boxHeight,
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                          color: CupertinoColors.activeBlue, width: 2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: VlcPlayer(
-                      controller: _vlcViewController,
-                      aspectRatio: 16 / 9,
-                      placeholder: const SizedBox(
-                        height: 250.0,
-                        child: Center(child: CircularProgressIndicator()),
-                      ),
+                Container(
+                  width: boxWidth,
+                  height: boxHeight,
+                  decoration: BoxDecoration(
+                    border:
+                        Border.all(color: CupertinoColors.activeBlue, width: 2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: VlcPlayer(
+                    controller: _vlcViewController,
+                    aspectRatio: 16 / 9,
+                    placeholder: const SizedBox(
+                      height: 250.0,
+                      child: Center(child: CircularProgressIndicator()),
                     ),
                   ),
+                ),
                 SizedBox(
                   width: boxWidth,
                   height: boxHeight,
@@ -125,7 +119,7 @@ class _RoiWidgetState extends State<RoiWidget> {
                     boxWidth: boxWidth,
                     boxHeight: boxHeight,
                     onRoiUpdated: (Rect? roi) {
-                      _tempRoi = roi; // 임시 ROI 값 저장
+                      _tempRoi = roi;
                     },
                   ),
                 ),
