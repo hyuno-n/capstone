@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Conv1D, MaxPooling1D
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Conv1D, MaxPooling1D, BatchNormalization
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import matplotlib.pyplot as plt
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 classes = ['넘어짐', '정상']
 
 # 넘파이 파일 로드
-data = np.load('keypoints_data.npz')
+data = np.load('keypoints_data_11633.npz')
 
 train_data = data['train_data']
 train_labels = data['train_labels']
@@ -29,13 +29,14 @@ input_shape = (num_keypoints, 2)
 model = Sequential()
 model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
 model.add(MaxPooling1D(pool_size=2))
-model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.001))))
-model.add(Dropout(0.3))
-model.add(Bidirectional(LSTM(64, return_sequences=False, kernel_regularizer=l2(0.001))))
-model.add(Dropout(0.3))
+model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.002))))  # L2 정규화값 증가
+model.add(Dropout(0.4))  # Dropout 증가
+model.add(Bidirectional(LSTM(64, return_sequences=False, kernel_regularizer=l2(0.002))))
+model.add(Dropout(0.4))  # Dropout 증가
 model.add(Dense(len(classes), activation='softmax'))
 
-model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.0001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
 
 # 모델 요약 출력
 model.summary()
@@ -71,10 +72,10 @@ plt.legend()
 plt.title('Accuracy over Epochs')
 
 # 이미지 저장
-plt.savefig('training_history.png')
+plt.savefig('lstm_11633__history.png')
 
 # 이미지 표시
 plt.show()
 
 # 모델 저장
-model.save('lstm_keypoints_model_improved1.h5')
+model.save('lstm_model_11633.h5')
