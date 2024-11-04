@@ -1,5 +1,6 @@
 // import 'package:app/controller/user_controller.dart';
 import 'package:app/pages/account_leave_page.dart';
+import 'package:app/pages/how_to_use_app_page.dart';
 import 'package:app/pages/user_detail_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -113,7 +114,7 @@ class UserSettingPage extends StatelessWidget {
               style: TextStyle(fontSize: 18),
             ),
             trailing: Text(
-              "Beta Test",
+              "알파 버전",
               style: TextStyle(fontSize: 18, color: Colors.grey[500]),
             ),
           ),
@@ -121,7 +122,7 @@ class UserSettingPage extends StatelessWidget {
             //leading: const Icon(Icons.policy),
             contentPadding: EdgeInsets.zero,
             title: const Text(
-              '약관 및 정책',
+              '도움말',
               style: TextStyle(fontSize: 18),
             ),
             trailing: Icon(
@@ -131,6 +132,10 @@ class UserSettingPage extends StatelessWidget {
             ),
             onTap: () {
               // 여기에 약관 및 정책으로 이동하는 코드 추가
+              // 약관 및 정책 페이지로 이동
+              Navigator.of(context).push(CupertinoPageRoute(
+                builder: (context) => const HowToUseAppPage(),
+              ));
             },
           ),
         ],

@@ -78,7 +78,7 @@ class App extends GetView<AppController> {
               ),
               GButton(
                 icon: Icons.featured_play_list,
-                text: '로그 확인',
+                text: '영상 클립',
                 //icon: Icons.alarm_outlined,
                 //iconColor: Colors.black.withOpacity(0.6),
                 //text: '로그 확인',

@@ -51,9 +51,10 @@ dependencies:
   google_fonts: ^6.2.1
   dio: ^5.0.0
   google_nav_bar: ^5.0.7
-  shared_preferences: ^2.0.11
   web: ^1.0.0 # 또는 가능한 최신 버전으로 업데이트
   dotted_border: ^2.0.0
+  smooth_page_indicator: ^1.2.0+3
+  shared_preferences: ^2.0.15
 
 dev_dependencies:
   flutter_test:
@@ -128,6 +129,13 @@ flutter:
     - assets/images/leave_account_page_icon.png
     - assets/images/setting_smoke.png
     - assets/images/smoke_log_icon.gif
+    - assets/images/gradient_camera.png
+    - assets/images/toggle_icon.png
+    - assets/images/chat_icon.png
+    - assets/images/heart_icon.png
+    - assets/images/shield_icon.png
+    - assets/images/lock_icon.png
+    - assets/images/check_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

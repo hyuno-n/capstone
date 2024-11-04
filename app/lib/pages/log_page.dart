@@ -161,7 +161,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
                   ),
                 ), // 이미지와 텍스트 간격
                 const Text(
-                  '로그가 없습니다',
+                  '저장된 영상 클립이 없습니다',
                   style: TextStyle(fontSize: 20, color: Colors.grey),
                 ),
               ],

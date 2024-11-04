@@ -110,7 +110,7 @@ class UserDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4), // 간격 추가
                       Text(
-                        userController.getUserId, // user 이름
+                        userController.getName, // user 이름
                         style: TextStyle(fontSize: 20, color: Colors.grey[900]),
                       ),
                       const SizedBox(height: 30), // 간격 추가
@@ -130,7 +130,7 @@ class UserDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4), // 간격 추가
                       Text(
-                        '이름', // 전화번호
+                        userController.getPhone, // 전화번호
                         style: TextStyle(fontSize: 20, color: Colors.grey[900]),
                       ),
                       const SizedBox(height: 30), // 간격 추가
@@ -139,7 +139,6 @@ class UserDetailPage extends StatelessWidget {
                 ),
               ],
             ),
-
             // 경계선 추가
             Divider(
               color: Colors.grey[400],
@@ -147,7 +146,6 @@ class UserDetailPage extends StatelessWidget {
               indent: 35,
               endIndent: 35,
             ),
-
             // 로그아웃 리스트 타일
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 35.0),

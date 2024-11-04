@@ -1,8 +1,8 @@
 import 'package:app/pages/login_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:app/controller/user_controller.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 
 class AccountLeavePage extends StatefulWidget {
   const AccountLeavePage({super.key});
@@ -17,6 +17,8 @@ class _AccountLeavePageState extends State<AccountLeavePage>
   late Animation<Offset> _imageAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _buttonAnimation;
+
+  final UserController userController = Get.put(UserController());
 
   @override
   void initState() {
@@ -58,9 +60,8 @@ class _AccountLeavePageState extends State<AccountLeavePage>
     super.dispose();
   }
 
-  void _confirm() {
-    // 확인 버튼 클릭 시 동작
-    print("확인 버튼이 클릭되었습니다.");
+  void _confirm() async {
+    await userController.deleteAccount();
   }
 
   void _showConfirmationDialog() {
@@ -78,9 +79,8 @@ class _AccountLeavePageState extends State<AccountLeavePage>
           ),
           CupertinoDialogAction(
             child: const Text('확인'),
-            onPressed: () {
-              // 여기에 탈퇴 로직 추가
-              print("탈퇴가 확인되었습니다.");
+            onPressed: () async {
+              await userController.deleteAccount();
               Navigator.of(context).pop(); // 다이얼로그 닫기
               Get.offAll(() => const Login_Page());
             },

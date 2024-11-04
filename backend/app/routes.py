@@ -9,6 +9,7 @@ import requests
 from flask_cors import CORS
 import boto3
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import or_, func
 
 bp = Blueprint('main', __name__)
 def get_s3_client():
@@ -69,6 +70,7 @@ def login():
     id = data.get('id')
     password = data.get('password')
 
+
     user = User.query.filter_by(id=id).first()
 
     if user is None or not user.check_password(password):
@@ -85,6 +87,7 @@ def login():
             'fall_detection_on': detection_status.fall_detection_on if detection_status else False,
             'fire_detection_on': detection_status.fire_detection_on if detection_status else False,
             'movement_detection_on': detection_status.movement_detection_on if detection_status else False,
+            'smoke_detection_on': detection_status.smoke_detection_on if detection_status else False,
             'roi_detection_on': detection_status.roi_detection_on if detection_status else False,
             'roi': {
                 'x1': detection_status.roi_x1 if detection_status else 0,
@@ -95,6 +98,8 @@ def login():
         })
     return jsonify({"message" : "Login successful",
                     "email" : user.email,
+                    'phone' : user.phone,
+                    'name' : user.name,
                     "cameras": cameras}), 200
 
 @bp.route('/get_max_camera_number',methods = ['GET'])
@@ -266,6 +271,7 @@ def receive_event():
     fall_detection = data.get('fall_detection', False)
     fire_detection = data.get('fire_detection', False)
     movement_detection = data.get('movement_detection', False)
+    smoke_detection = data.get('smoke_detection', False)
     user_id = data.get('user_id', 'Unknown')
     camera_number = data.get('camera_number', 1)  # 카메라 번호 추가
     roi_detection = data.get('roi_detection', False)
@@ -284,6 +290,7 @@ def receive_event():
     detection_status.fall_detection_on = fall_detection
     detection_status.fire_detection_on = fire_detection
     detection_status.movement_detection_on = movement_detection
+    detection_status.smoke_detection_on = smoke_detection
     detection_status.roi_detection_on = roi_detection
     detection_status.roi_x1 = roi_values.get('roi_x1', detection_status.roi_x1)
     detection_status.roi_y1 = roi_values.get('roi_y1', detection_status.roi_y1)
@@ -304,6 +311,7 @@ def receive_event():
                 'fall_detection_on': detection_status.fall_detection_on,
                 'fire_detection_on': detection_status.fire_detection_on,
                 'movement_detection_on': detection_status.movement_detection_on,
+                'smoke_detection_on': detection_status.smoke_detection_on,
                 'roi_detection_on': detection_status.roi_detection_on,
                 'roi_values': {
                     'roi_x1': detection_status.roi_x1,
@@ -358,6 +366,7 @@ def add_camera():
         fall_detection_on=False,
         fire_detection_on=False,
         movement_detection_on=False,
+        smoke_detection_on = False,
         roi_detection_on=False,
         roi_x1=0,
         roi_y1=0,
@@ -374,6 +383,7 @@ def add_camera():
             'fall_detection_on': new_detection_status.fall_detection_on,
             'fire_detection_on': new_detection_status.fire_detection_on,
             'movement_detection_on': new_detection_status.movement_detection_on,
+            'smoke_detection_on' : new_detection_status.smoke_detection_on,
             'roi_detection_on': new_detection_status.roi_detection_on,
             'roi_values': {
                 'roi_x1': new_detection_status.roi_x1,
@@ -445,7 +455,7 @@ def check_user():
     if not user_id:
         return jsonify({"error": "No ID provided"}), 400
     
-    user = User.query.filter_by(name=user_id).first()
+    user = User.query.filter_by(id=user_id).first()
     
     if user:
         return jsonify({"exists": True}), 200
@@ -474,21 +484,39 @@ def update_password():
 @bp.route('/find_user_id', methods=['POST'])
 def find_user_id():
     data = request.get_json()
-    name = data.get('name')
-    contact = data.get('contact')  # 이메일 또는 휴대폰 번호
+    user_name = data.get('name')
+    contact = data.get('contact')
 
-    if not name or not contact:
+    if not user_name or not contact:
         return jsonify({"error": "Name or contact information missing"}), 400
 
-    # 이름과 이메일 또는 휴대폰 번호로 사용자 검색
-    user = User.query.filter_by(name=name).filter(
-        (User.email == contact) | (User.phone == contact)
-    ).first()
+    try:
+        # 공백 제거 후 다시 할당
+        user_name = user_name.strip()
+        contact = contact.strip()
 
-    if user:
-        return jsonify({"user_id": user.id}), 200
-    else:
-        return jsonify({"error": "User not found"}), 404
+        # 사용자 검색 쿼리 실행 및 디버깅 로그 추가
+        user = User.query.filter(
+            func.binary(User.name) == user_name
+        ).filter(
+            or_(
+                func.binary(User.email) == contact,
+                func.binary(User.phone) == contact
+            )
+        ).first()
+
+        # 검색 결과 로그
+        print(f"User found: {user}") if user else print("User not found")
+
+        if user:
+            return jsonify({"user_id": user.id}), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+
+    except Exception as e:
+        # 예외 발생 시 로그 출력
+        print(f"Error occurred: {e}")
+        return jsonify({"error": "An error occurred during processing"}), 500
 
 @bp.route('/verify_user_for_password_reset', methods=['POST'])
 def verify_user_for_password_reset():
@@ -508,3 +536,23 @@ def verify_user_for_password_reset():
         return jsonify({"verification": "success"}), 200
     else:
         return jsonify({"error": "User verification failed"}), 404
+    
+@bp.route('/delete_user/<string:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    try:
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # 관련된 데이터 삭제
+        CameraInfo.query.filter_by(user_id=user_id).delete()
+        DetectionStatus.query.filter_by(user_id=user_id).delete()
+        EventLog.query.filter_by(user_id=user_id).delete()
+        VideoClip.query.filter_by(user_id=user_id).delete()
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "User and related data deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500

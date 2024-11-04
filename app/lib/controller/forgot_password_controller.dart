@@ -16,7 +16,6 @@ class ForgotPasswordController {
   Future<void> findUserId(
       BuildContext context, String name, String contact) async {
     final String url = '${getBaseUrl()}/find_user_id';
-
     try {
       final response = await http.post(
         Uri.parse(url),
@@ -27,18 +26,18 @@ class ForgotPasswordController {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final userId = data['user_id'];
-        showWarningDialog(context, '아이디 찾기 성공: 아이디는 $userId 입니다.');
+        showWarningDialog(context, '아이디는 $userId 입니다.', '아이디 찾기 성공!');
       } else {
         final error = jsonDecode(response.body)['error'];
-        showWarningDialog(context, error ?? '아이디 찾기 실패');
+        showWarningDialog(context, error ?? '아이디 찾기 실패', '아이디 찾기 실패!');
       }
     } catch (e) {
-      showWarningDialog(context, '아이디 찾기 중 오류가 발생했습니다.');
+      showWarningDialog(context, '아이디 찾기 중 오류가 발생했습니다.', '오류 발생!');
     }
   }
 
   /// 비밀번호 찾기 기능 - 사용자 인증 (아이디와 이메일/휴대폰 인증)
-  Future<void> verifyUserForPasswordReset(
+  Future<bool> verifyUserForPasswordReset(
       BuildContext context, String userId, String contact) async {
     final String url = '${getBaseUrl()}/verify_user_for_password_reset';
 
@@ -50,13 +49,15 @@ class ForgotPasswordController {
       );
 
       if (response.statusCode == 200) {
-        showWarningDialog(context, '사용자 인증이 완료되었습니다. 비밀번호를 재설정하세요.');
+        return true; // 인증 성공
       } else {
         final error = jsonDecode(response.body)['error'];
-        showWarningDialog(context, error ?? '사용자 인증 실패');
+        showWarningDialog(context, error ?? '사용자 인증 실패', '인증 실패!');
+        return false; // 인증 실패
       }
     } catch (e) {
-      showWarningDialog(context, '비밀번호 찾기 중 오류가 발생했습니다.');
+      showWarningDialog(context, '비밀번호 찾기 중 오류가 발생했습니다.', '오류 발생!');
+      return false; // 오류 발생 시 false 반환
     }
   }
 
@@ -73,13 +74,13 @@ class ForgotPasswordController {
       );
 
       if (response.statusCode == 200) {
-        showWarningDialog(context, '비밀번호가 성공적으로 변경되었습니다.');
+        showWarningDialog(context, '비밀번호가 성공적으로 변경되었습니다.', '비밀번호 변경 성공!');
       } else {
         final error = jsonDecode(response.body)['error'];
-        showWarningDialog(context, error ?? '비밀번호 변경 실패');
+        showWarningDialog(context, error ?? '비밀번호 변경 실패', '비밀번호 변경 실패!');
       }
     } catch (e) {
-      showWarningDialog(context, '비밀번호 변경 중 오류가 발생했습니다.');
+      showWarningDialog(context, '비밀번호 변경 중 오류가 발생했습니다.', '오류 발생!');
     }
   }
 }
