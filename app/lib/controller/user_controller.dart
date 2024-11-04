@@ -7,6 +7,7 @@ class UserController extends GetxController {
   var isLoggedIn = false.obs;
   var email = ''.obs;
   var phone = ''.obs;
+  var name = ''.obs;
 
   void setUsername(String value) {
     username.value = value;
@@ -24,20 +25,23 @@ class UserController extends GetxController {
     phone.value = value;
   }
 
+  void setName(String value) {
+    name.value = value;
+  }
+
   String get getUserId => username.value;
   String get getEmail => email.value;
   String get getPhone => phone.value;
+  String get getName => name.value;
 
   Future<void> deleteAccount() async {
     if (username.value.isEmpty) {
       return;
     }
-
     final String flaskIp = dotenv.env['FLASK_IP'] ?? 'localhost';
     final String flaskPort = dotenv.env['FLASK_PORT'] ?? '5000';
     final userId = username.value;
     final String url = 'http://$flaskIp:$flaskPort/delete_user/$userId';
-
     try {
       final response = await http.delete(Uri.parse(url));
 

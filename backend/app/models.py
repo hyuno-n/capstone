@@ -44,6 +44,7 @@ class DetectionStatus(db.Model):
     fall_detection_on = db.Column(db.Boolean, default=False)
     fire_detection_on = db.Column(db.Boolean, default=False)
     movement_detection_on = db.Column(db.Boolean, default=False)
+    smoke_detection_on = db.Column(db.Boolean, default=False)
     roi_detection_on = db.Column(db.Boolean, default=False)
     
     # ROI 값을 별도 필드로 저장
