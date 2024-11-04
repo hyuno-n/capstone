@@ -382,13 +382,14 @@ def process_video(user_id, camera_id, rtsp_url):
 
         # 화재 감지
         if camera_settings['fire_detection_on']:
-            fire_predictions = fire_detect_model.predict(source=frame, stream=True)
+            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True))
             fire_detected_in_roi = False
-            for box in fire_predictions.boxes:
-                x1, y1, x2, y2 = map(int, box.xyxy[0])
-                if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
-                    fire_detected_in_roi = True
-                    break
+            for prediction in fire_predictions:
+                for box in prediction:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                        fire_detected_in_roi = True
+                        break
 
             if fire_detected_in_roi:
                 label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
