@@ -10,6 +10,8 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:app/pages/forgot_password_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:app/pages/how_to_use_app_page.dart';
 
 class Login_Page extends StatelessWidget {
   const Login_Page({super.key});
@@ -63,7 +65,6 @@ class _LoginState extends State<Login> {
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
         logController.connectSocket();
-
         //CameraProvider에 상태 설정 및 SharedPreferences
         final cameraProvider =
             Provider.of<CameraProvider>(context, listen: false);
@@ -80,10 +81,25 @@ class _LoginState extends State<Login> {
 
         await cameraProvider.saveAllDetectionStatus();
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const App()),
-        );
+        final prefs = await SharedPreferences.getInstance();
+        final String currentUserId = _usernameController.text;
+        final bool hasSeenHowToUsePage =
+            prefs.getBool('seenHowToUseAppPage_$currentUserId') ?? false;
+
+        if (!hasSeenHowToUsePage) {
+          // 첫 로그인 시 HowToUseAppPage를 보여주고 상태를 저장
+          await prefs.setBool('seenHowToUseAppPage_$currentUserId', true);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const HowToUseAppPage()),
+          );
+        } else {
+          // 이미 본 경우 바로 메인 페이지로 이동
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => const App()),
+          );
+        }
       } else {
         Get.snackbar(
           "Login Failed",

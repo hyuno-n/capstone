@@ -2,7 +2,6 @@ import 'package:app/usePage/page_1.dart';
 import 'package:app/usePage/page_2.dart';
 import 'package:app/usePage/page_3.dart';
 import 'package:app/usePage/page_4.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
