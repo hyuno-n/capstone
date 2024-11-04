@@ -87,6 +87,7 @@ def login():
             'fall_detection_on': detection_status.fall_detection_on if detection_status else False,
             'fire_detection_on': detection_status.fire_detection_on if detection_status else False,
             'movement_detection_on': detection_status.movement_detection_on if detection_status else False,
+            'smoke_detection_on': detection_status.smoke_detection_on if detection_status else False,
             'roi_detection_on': detection_status.roi_detection_on if detection_status else False,
             'roi': {
                 'x1': detection_status.roi_x1 if detection_status else 0,
@@ -98,6 +99,7 @@ def login():
     return jsonify({"message" : "Login successful",
                     "email" : user.email,
                     'phone' : user.phone,
+                    'name' : user.name,
                     "cameras": cameras}), 200
 
 @bp.route('/get_max_camera_number',methods = ['GET'])
@@ -269,6 +271,7 @@ def receive_event():
     fall_detection = data.get('fall_detection', False)
     fire_detection = data.get('fire_detection', False)
     movement_detection = data.get('movement_detection', False)
+    smoke_detection = data.get('smoke_detection', False)
     user_id = data.get('user_id', 'Unknown')
     camera_number = data.get('camera_number', 1)  # 카메라 번호 추가
     roi_detection = data.get('roi_detection', False)
@@ -287,6 +290,7 @@ def receive_event():
     detection_status.fall_detection_on = fall_detection
     detection_status.fire_detection_on = fire_detection
     detection_status.movement_detection_on = movement_detection
+    detection_status.smoke_detection_on = smoke_detection
     detection_status.roi_detection_on = roi_detection
     detection_status.roi_x1 = roi_values.get('roi_x1', detection_status.roi_x1)
     detection_status.roi_y1 = roi_values.get('roi_y1', detection_status.roi_y1)
@@ -307,6 +311,7 @@ def receive_event():
                 'fall_detection_on': detection_status.fall_detection_on,
                 'fire_detection_on': detection_status.fire_detection_on,
                 'movement_detection_on': detection_status.movement_detection_on,
+                'smoke_detection_on': detection_status.smoke_detection_on,
                 'roi_detection_on': detection_status.roi_detection_on,
                 'roi_values': {
                     'roi_x1': detection_status.roi_x1,
@@ -361,6 +366,7 @@ def add_camera():
         fall_detection_on=False,
         fire_detection_on=False,
         movement_detection_on=False,
+        smoke_detection_on = False,
         roi_detection_on=False,
         roi_x1=0,
         roi_y1=0,
@@ -377,6 +383,7 @@ def add_camera():
             'fall_detection_on': new_detection_status.fall_detection_on,
             'fire_detection_on': new_detection_status.fire_detection_on,
             'movement_detection_on': new_detection_status.movement_detection_on,
+            'smoke_detection_on' : new_detection_status.smoke_detection_on,
             'roi_detection_on': new_detection_status.roi_detection_on,
             'roi_values': {
                 'roi_x1': new_detection_status.roi_x1,
@@ -530,41 +537,22 @@ def verify_user_for_password_reset():
     else:
         return jsonify({"error": "User verification failed"}), 404
     
-@bp.route('/delete_user/<int:user_id>', methods=['DELETE'])
+@bp.route('/delete_user/<string:user_id>', methods=['DELETE'])
 def delete_user(user_id):
     try:
-        # 사용자 검색
         user = User.query.filter_by(id=user_id).first()
         if not user:
             return jsonify({"error": "User not found"}), 404
 
         # 관련된 데이터 삭제
-        # 1. CameraInfo 삭제
-        cameras = CameraInfo.query.filter_by(user_id=user_id).all()
-        for camera in cameras:
-            db.session.delete(camera)
-
-        # 2. DetectionStatus 삭제
-        detection_statuses = DetectionStatus.query.filter_by(user_id=user_id).all()
-        for status in detection_statuses:
-            db.session.delete(status)
-
-        # 3. EventLog 삭제
-        events = EventLog.query.filter_by(user_id=user_id).all()
-        for event in events:
-            db.session.delete(event)
-
-        # 4. VideoClip 삭제
-        videoclips = VideoClip.query.filter_by(user_id=user_id).all()
-        for video in videoclips:
-            db.session.delete(video)
-
-        # 사용자 삭제
+        CameraInfo.query.filter_by(user_id=user_id).delete()
+        DetectionStatus.query.filter_by(user_id=user_id).delete()
+        EventLog.query.filter_by(user_id=user_id).delete()
+        VideoClip.query.filter_by(user_id=user_id).delete()
         db.session.delete(user)
         db.session.commit()
 
         return jsonify({"message": "User and related data deleted successfully"}), 200
     except Exception as e:
         db.session.rollback()
-        print(f"Error occurred: {e}")
         return jsonify({"error": str(e)}), 500

@@ -11,7 +11,6 @@ def event_update():
     print(data['camera_info'])
     print("")
     print("")
-    print(len(data['camera_info']))
     return jsonify({"message": "Event received by model server"}), 200
 
 if __name__ == '__main__':

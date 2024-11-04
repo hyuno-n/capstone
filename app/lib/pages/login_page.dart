@@ -59,6 +59,7 @@ class _LoginState extends State<Login> {
         userController.setLoggedIn(true);
         userController.setEmail(data['email']);
         userController.setPhone(data['phone']);
+        userController.setName(data['name']);
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
         logController.connectSocket();

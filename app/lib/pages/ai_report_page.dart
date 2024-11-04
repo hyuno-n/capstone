@@ -4,7 +4,6 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:app/components/ai_report.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
 
 // Ai report 페이지 App에서 -> 이 페이지로 넘겨옴 <Ai report main page>
 
@@ -67,8 +66,8 @@ class AiReportPage extends StatelessWidget {
                               child: Container(
                                 width: 9,
                                 height: 9,
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 255, 61, 61),
+                                decoration: const BoxDecoration(
+                                  color: Color.fromARGB(255, 255, 61, 61),
                                   shape: BoxShape.circle,
                                 ),
                               ),
