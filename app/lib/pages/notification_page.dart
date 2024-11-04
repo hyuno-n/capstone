@@ -139,7 +139,7 @@ class _NotificationPageState extends State<NotificationPage>
                 // 이벤트 이름에 따른 메시지, 아이콘 및 색상 결정
                 String alertMessage;
                 IconData iconData;
-                Color iconColor;
+                Color? iconColor;
 
                 switch (log['eventname']) {
                   case 'Movement':
@@ -156,6 +156,11 @@ class _NotificationPageState extends State<NotificationPage>
                     alertMessage = '화재가 감지되었습니다.';
                     iconData = Icons.whatshot;
                     iconColor = Colors.red;
+                    break;
+                  case 'Smoke':
+                    alertMessage = '연기가 감지되었습니다.';
+                    iconData = Icons.cloud;
+                    iconColor = Colors.grey[700];
                     break;
                   default:
                     alertMessage = '알 수 없는 이벤트입니다.';

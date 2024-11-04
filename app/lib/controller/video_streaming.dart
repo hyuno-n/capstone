@@ -158,13 +158,6 @@ class _StreamingState extends State<Streaming> {
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: SvgPicture.asset(
-                    "assets/svg/icons/microphone.svg",
-                    height: 20,
-                  ),
-                  onPressed: () {}, // Microphone toggle logic 추가 필요
-                ),
-                IconButton(
                   icon: SvgPicture.asset("assets/svg/icons/audio_on.svg"),
                   onPressed: () {
                     _toggleVolumeSlider(); // 볼륨 슬라이더 표시 토글

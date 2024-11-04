@@ -33,10 +33,8 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
       vsync: this,
     );
 
-    _animation = Tween<Offset>(
-      begin: Offset(0, 0.2),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
+    _animation = Tween<Offset>(begin: Offset(0, 0.2), end: Offset.zero)
+        .animate(CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOut,
     ));
@@ -44,7 +42,6 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
     // 애니메이션 시작
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        // 위젯이 여전히 활성 상태인지 확인
         _controller.forward();
       }
     });
@@ -57,15 +54,10 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    // 애니메이션이 진행 중이면 정지
     if (_controller.isAnimating) {
       _controller.stop();
     }
-
-    // 애니메이션 컨트롤러 파기
     _controller.dispose();
-
-    // 상위 클래스 dispose 호출
     super.dispose();
   }
 
@@ -80,7 +72,10 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
     final cameraNumber = cameraProvider.cameraNumbers[cameraIndex];
 
     if (value &&
-        (setting == 'Fall' || setting == 'Fire' || setting == 'Move')) {
+        (setting == 'Fall' ||
+            setting == 'Fire' ||
+            setting == 'Move' ||
+            setting == 'Smoke')) {
       _showConfirmationDialog(cameraNumber, setting, value);
     } else if (setting == 'Range') {
       _onDetectionRangeChanged(cameraNumber, value);
@@ -127,6 +122,8 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
       message = "넘어짐 감지를 활성화하시겠습니까?";
     } else if (setting == 'Fire') {
       message = "화재 감지를 활성화하시겠습니까?";
+    } else if (setting == 'Smoke') {
+      message = "연기 감지를 활성화하시겠습니까?";
     } else {
       message = "움직임 감지를 활성화하시겠습니까?";
     }
@@ -173,6 +170,7 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
       cameraSettings?['Fire'] ?? false,
       cameraSettings?['Move'] ?? false,
       cameraSettings?['Range'] ?? false,
+      cameraSettings?['Smoke'] ?? false,
       currentUserId,
       roiProvider.getRoiValues(),
       cameraNumber,
@@ -187,9 +185,7 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
           'Camera ${cameraIndex + 1}',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        SizedBox(
-          height: 10,
-        ),
+        SizedBox(height: 10),
         SizedBox(
           height: 190,
           child: ListView(
@@ -206,6 +202,12 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
                 setting: 'Fire',
                 title: 'Fire',
                 icon: 'assets/images/setting_fire.png',
+              ),
+              _buildDetectionBox(
+                cameraIndex: cameraIndex,
+                setting: 'Smoke', // Smoke 추가
+                title: 'Smoke',
+                icon: 'assets/images/setting_smoke.png', // Smoke 아이콘
               ),
               _buildDetectionBox(
                 cameraIndex: cameraIndex,
@@ -262,7 +264,9 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
                     title,
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
-                      fontSize: (setting == 'Range') ? 18.4 : 20.0,
+                      fontSize: (setting == 'Range' || setting == 'Smoke')
+                          ? 17
+                          : 20.0,
                       color: value ? Colors.white : Colors.black,
                     ),
                   ),
@@ -292,7 +296,7 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
         future: _cameraInitialization,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: LoadingIndicator()); //로딩 중일 때 표시
+            return Center(child: LoadingIndicator()); // 로딩 중일 때 표시
           } else if (snapshot.hasError) {
             return Center(child: Text("오류 발생: ${snapshot.error}"));
           } else {

@@ -54,6 +54,7 @@ dependencies:
   shared_preferences: ^2.0.11
   web: ^1.0.0 # 또는 가능한 최신 버전으로 업데이트
   dotted_border: ^2.0.0
+  smooth_page_indicator: ^1.2.0+3
 
 dev_dependencies:
   flutter_test:
@@ -126,6 +127,12 @@ flutter:
     - assets/images/no_camera_icon.png
     - assets/images/no_alram_icon.png
     - assets/images/leave_account_page_icon.png
+    - assets/images/setting_smoke.png
+    - assets/images/smoke_log_icon.gif
+    - assets/images/gradient_camera.png
+    - assets/images/toggle_icon.png
+    - assets/images/chat_icon.png
+    - assets/images/heart_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

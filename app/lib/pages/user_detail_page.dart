@@ -139,7 +139,6 @@ class UserDetailPage extends StatelessWidget {
                 ),
               ],
             ),
-
             // 경계선 추가
             Divider(
               color: Colors.grey[400],
@@ -147,7 +146,6 @@ class UserDetailPage extends StatelessWidget {
               indent: 35,
               endIndent: 35,
             ),
-
             // 로그아웃 리스트 타일
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 35.0),
