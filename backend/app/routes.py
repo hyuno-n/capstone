@@ -42,6 +42,7 @@ def add_user():
         return jsonify({"error": "No data received"}), 400
 
     id = data.get('id')
+    name = data.get('name')
     email = data.get('email')
     phone = data.get('phone')
     address = data.get('address')
@@ -51,7 +52,7 @@ def add_user():
     if not id or not email or not phone or not address or not detailed_address or not password:
         return jsonify({"error": "Missing user information"}), 400
 
-    new_user = User(id=id, email=email, phone=phone, address=address, detailed_address=detailed_address)
+    new_user = User(id=id, name = name, email=email, phone=phone, address=address, detailed_address=detailed_address)
     new_user.set_password(password)
     db.session.add(new_user)
     db.session.commit()
@@ -403,7 +404,6 @@ def add_camera():
 
     return jsonify({"message": "Camera added", "camera_number": camera_number}), 200
 
-
 # 카메라 삭제 엔드포인트
 @bp.route('/delete_camera/<int:camera_number>', methods=['DELETE'])
 def delete_camera(camera_number):
@@ -436,3 +436,75 @@ def delete_camera(camera_number):
         print("모델 서버 이벤트 전송 실패:", response.status_code)
 
     return jsonify({"message": "Camera deleted and numbers reordered"}), 200
+
+@bp.route('/check_user', methods=['POST'])
+def check_user():
+    data = request.get_json()
+    user_id = data.get('id')
+    
+    if not user_id:
+        return jsonify({"error": "No ID provided"}), 400
+    
+    user = User.query.filter_by(name=user_id).first()
+    
+    if user:
+        return jsonify({"exists": True}), 200
+    else:
+        return jsonify({"exists": False}), 200
+
+@bp.route('/update_password', methods=['POST'])
+def update_password():
+    data = request.get_json()
+    user_id = data.get('id')
+    new_password = data.get('new_password')
+
+    if not user_id or not new_password:
+        return jsonify({"error": "Missing fields"}), 400
+
+    user = User.query.filter_by(id=user_id).first()
+    
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+
+    user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    return jsonify({"message": "Password updated successfully"}), 200
+
+@bp.route('/find_user_id', methods=['POST'])
+def find_user_id():
+    data = request.get_json()
+    name = data.get('name')
+    contact = data.get('contact')  # 이메일 또는 휴대폰 번호
+
+    if not name or not contact:
+        return jsonify({"error": "Name or contact information missing"}), 400
+
+    # 이름과 이메일 또는 휴대폰 번호로 사용자 검색
+    user = User.query.filter_by(name=name).filter(
+        (User.email == contact) | (User.phone == contact)
+    ).first()
+
+    if user:
+        return jsonify({"user_id": user.id}), 200
+    else:
+        return jsonify({"error": "User not found"}), 404
+
+@bp.route('/verify_user_for_password_reset', methods=['POST'])
+def verify_user_for_password_reset():
+    data = request.get_json()
+    user_id = data.get('id')
+    contact = data.get('contact')  # 이메일 또는 휴대폰 번호
+
+    if not user_id or not contact:
+        return jsonify({"error": "User ID or contact information missing"}), 400
+
+    # 아이디와 이메일 또는 휴대폰 번호로 사용자 검색
+    user = User.query.filter_by(id=user_id).filter(
+        (User.email == contact) | (User.phone == contact)
+    ).first()
+
+    if user:
+        return jsonify({"verification": "success"}), 200
+    else:
+        return jsonify({"error": "User verification failed"}), 404

@@ -40,6 +40,7 @@ class SignUpPageContent extends StatefulWidget {
 class _SignUpPageContentState extends State<SignUpPageContent> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _idController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -49,6 +50,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
   final _detailedAddressController = TextEditingController(); // 상세주소
 
   String? _nameError;
+  String? _idError;
   String? _emailError;
   String? _passwordError;
   String? _confirmPasswordError;
@@ -57,6 +59,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
   @override
   void dispose() {
     _nameController.dispose();
+    _idController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -70,6 +73,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
   void _validateInputs() {
     setState(() {
       _nameError = validateName(_nameController.text);
+      _idError = validateId(_idController.text);
       _emailError = validateEmail(_emailController.text);
       _passwordError = validatePassword(_passwordController.text);
       _confirmPasswordError = validateConfirmPassword(
@@ -80,7 +84,8 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
 
   Future<void> _registerUser(BuildContext context) async {
     if (_formKey.currentState?.validate() ?? false) {
-      final String id = _nameController.text;
+      final String name = _nameController.text;
+      final String id = _idController.text;
       final String email = _emailController.text;
       final String password = _passwordController.text;
       final String phone = _phoneController.text;
@@ -97,6 +102,7 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
           headers: {'Content-Type': 'application/json'},
           body: jsonEncode({
             'id': id,
+            'name': name,
             'email': email,
             'password': password, // 비밀번호 필드 추가
             'phone': phone,
@@ -166,17 +172,41 @@ class _SignUpPageContentState extends State<SignUpPageContent> {
                     ),
                     const SizedBox(height: 8),
                     CupertinoTextField(
-                      controller: _nameController,
+                      controller: _idController,
                       placeholder: "Enter your id",
                       onChanged: (value) {
                         setState(() {
-                          _nameError = validateName(value);
+                          _nameError = validateId(value);
                         });
                       },
                     ),
                     if (_nameError != null)
                       Text(
                         _nameError!,
+                        style:
+                            const TextStyle(color: CupertinoColors.systemRed),
+                      ),
+                    const SizedBox(height: 20),
+                    const Text(
+                      "이름",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    CupertinoTextField(
+                      controller: _nameController,
+                      placeholder: "Enter your name",
+                      onChanged: (value) {
+                        setState(() {
+                          _idError = validateName(value);
+                        });
+                      },
+                    ),
+                    if (_idError != null)
+                      Text(
+                        _idError!,
                         style:
                             const TextStyle(color: CupertinoColors.systemRed),
                       ),

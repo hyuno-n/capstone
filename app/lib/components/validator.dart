@@ -8,6 +8,15 @@ String? validateName(String? value) {
   return null;
 }
 
+String? validateId(String? value) {
+  if (value == null || value.isEmpty) {
+    return '이름을 입력하세요';
+  } else if (value.length < 2) {
+    return '아이디는 두 글자 이상이어야 합니다';
+  }
+  return null;
+}
+
 String? validateEmail(String? value) {
   final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
   if (value == null || value.isEmpty) {

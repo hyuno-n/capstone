@@ -76,8 +76,8 @@ class User_page extends StatelessWidget {
                               child: Container(
                                 width: 9,
                                 height: 9,
-                                decoration: BoxDecoration(
-                                  color: const Color.fromARGB(255, 255, 61, 61),
+                                decoration: const BoxDecoration(
+                                  color: Color.fromARGB(255, 255, 61, 61),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -241,8 +241,8 @@ class User_page extends StatelessWidget {
                             '클립 개수 ',
                             style: TextStyle(fontSize: 14, color: Colors.black),
                           ),
-                          const Text(
-                            '0',
+                          Text(
+                            '${logController.videocount}',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,

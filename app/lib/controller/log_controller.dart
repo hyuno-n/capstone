@@ -12,6 +12,7 @@ class LogController extends GetxController {
   var logs = <Map<String, String>>[].obs;
   var videoClips = <Map<String, String>>[].obs;
   int detectionCount = 0;
+  int videocount = 0;
   String currentUserId = '';
 
   RxBool isLoading = false.obs;
@@ -32,6 +33,7 @@ class LogController extends GetxController {
 
   void handleIncomingMessage(Map<String, dynamic> data) {
     detectionCount++;
+    videocount++;
     String userId = data['user_id'] ?? "Unknown User";
     String timestamp = data['timestamp'] ?? DateTime.now().toIso8601String();
     String eventname = data['eventname'] ?? "New Event";
@@ -112,7 +114,7 @@ class LogController extends GetxController {
             'event_url': clip['event_url']?.toString() ?? ''
           };
         }).toList();
-
+        videocount = videoClips.length;
         isLoading.value = false;
       } else {
         _handleFetchError();
