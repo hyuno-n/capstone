@@ -67,6 +67,7 @@ class EventDetector:
         self.s3_bucket_name = s3_bucket_name
         self.s3_folder_name = s3_folder_name
 
+        self.fall_detection_count = {}  # 각 객체의 낙상 감지 횟수를 저장할 딕셔너리
         self.event_detected = False
         self.frames_after_event = 0
         self.pre_event_buffer = deque(maxlen=buffer_length)
@@ -321,8 +322,24 @@ def process_video(user_id, camera_id, rtsp_url):
                 predicted_class = np.argmax(predictions, axis=1)[0]
                 predicted_label = classes[predicted_class]
 
-                # 객체가 감지된 경우, 객체 추적 정보에 업데이트
-                object_predictions[track_id] = predicted_label
+                # 낙상 5회 이하 감지시 Normal로 검출
+                object_predictions[track_id] = default_class
+
+                # 낙상 감지 이벤트 카운트
+                if predicted_label == 'Fall':
+                    if track_id not in event_detector.fall_detection_count:
+                        event_detector.fall_detection_count[track_id] = 0  # 카운트 초기화
+                    event_detector.fall_detection_count[track_id] += 1  # 카운트 증가
+                    
+                else:
+                    # 낙상이 아닐 경우 카운트 초기화
+                    if track_id in event_detector.fall_detection_count:
+                        event_detector.fall_detection_count[track_id] = 0  # 또는 감소 로직을 원하면 조정 가능
+
+                 # 낙상이 5회 이상 감지된 경우
+                if event_detector.fall_detection_count[track_id] >= 5:
+                    object_predictions[track_id] = 'Fall'
+                    print(f"Track ID {track_id} - Fall detected!")
                 
                 for (x, y) in keypoints:
                     if is_in_detection_area(x, y):  # ROI 내에 있는지 확인
@@ -330,9 +347,7 @@ def process_video(user_id, camera_id, rtsp_url):
                         break  # ROI 내에 있는 점이 있으면 감지 성공으로 처리
                     
             # ROI 내에서 감지된 객체에 대해 이벤트 감지 및 시각화
-            for track_id in detected_in_roi:
-                event_detector.handle_event_detection(frame, object_predictions[track_id])
-                
+            for track_id in detected_in_roi:                
                 # 해당 객체에 대한 박스 및 키포인트 그리기
                 if track_id in track_ids:
                     index = track_ids.index(track_id)
@@ -345,13 +360,14 @@ def process_video(user_id, camera_id, rtsp_url):
                 
                     # 해당 객체의 키포인트 그리기
                     draw_skeletons_and_boxes(frame, keypoints_list[index], box)
+                event_detector.handle_event_detection(frame, object_predictions[track_id])
 
             # 추적 경로 그리기
             for track_id, track in track_history.items():
                 if track:
                     points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                     cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-                    
+
         # 움직임 감지
         if camera_settings['movement_detection_on']:
             frame, motion_detected = detect_movement(frame)
@@ -369,10 +385,10 @@ def process_video(user_id, camera_id, rtsp_url):
                     break
 
             if fire_detected_in_roi:
-                event_detector.handle_event_detection(frame, 'Fire detected', user_id, camera_id)
                 label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                event_detector.handle_event_detection(frame, 'Fire detected', user_id, camera_id)
 
         # 프레임을 계속해서 버퍼에 저장
         event_detector.pre_event_buffer.append(frame)
