@@ -76,6 +76,9 @@ class LogList extends StatelessWidget {
                   case 'Fall':
                     eventIcon = 'assets/images/fall_detection_on.gif';
                     break;
+                  case 'Smoke':
+                    eventIcon = 'assets/images/smoke_log_icon.gif';
+                    break;
                   default:
                     eventIcon = '';
                 }

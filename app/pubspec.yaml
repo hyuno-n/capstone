@@ -126,6 +126,8 @@ flutter:
     - assets/images/no_camera_icon.png
     - assets/images/no_alram_icon.png
     - assets/images/leave_account_page_icon.png
+    - assets/images/setting_smoke.png
+    - assets/images/smoke_log_icon.gif
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

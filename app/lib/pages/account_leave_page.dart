@@ -1,5 +1,8 @@
+import 'package:app/pages/login_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 
 class AccountLeavePage extends StatefulWidget {
   const AccountLeavePage({super.key});
@@ -35,14 +38,12 @@ class _AccountLeavePageState extends State<AccountLeavePage>
 
     _textAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
       parent: _controller,
-      curve:
-          const Interval(0.4, 1.0, curve: Curves.easeIn), // 0.9초에 시작해 1.5초에 끝남
+      curve: const Interval(0.4, 1.0, curve: Curves.easeIn), // 텍스트 애니메이션
     ));
 
     _buttonAnimation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
       parent: _controller,
-      curve:
-          const Interval(1.0, 1.0, curve: Curves.easeIn), // 1.5초에 시작해 2.0초에 끝남
+      curve: const Interval(1.0, 1.0, curve: Curves.easeIn), // 버튼 애니메이션
     ));
 
     // 애니메이션 시작
@@ -60,6 +61,33 @@ class _AccountLeavePageState extends State<AccountLeavePage>
   void _confirm() {
     // 확인 버튼 클릭 시 동작
     print("확인 버튼이 클릭되었습니다.");
+  }
+
+  void _showConfirmationDialog() {
+    showCupertinoDialog(
+      context: context,
+      builder: (context) => CupertinoAlertDialog(
+        title: const Text('탈퇴하기'),
+        content: const Text('정말로 탈퇴하시겠습니까?'),
+        actions: [
+          CupertinoDialogAction(
+            child: const Text('취소'),
+            onPressed: () {
+              Navigator.of(context).pop(); // 다이얼로그 닫기
+            },
+          ),
+          CupertinoDialogAction(
+            child: const Text('확인'),
+            onPressed: () {
+              // 여기에 탈퇴 로직 추가
+              print("탈퇴가 확인되었습니다.");
+              Navigator.of(context).pop(); // 다이얼로그 닫기
+              Get.offAll(() => const Login_Page());
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -95,7 +123,7 @@ class _AccountLeavePageState extends State<AccountLeavePage>
             FadeTransition(
               opacity: _buttonAnimation,
               child: ElevatedButton(
-                onPressed: _confirm, // 확인 버튼 클릭 시 호출
+                onPressed: _showConfirmationDialog, // 확인 버튼 클릭 시 호출
                 style: ElevatedButton.styleFrom(
                   foregroundColor: const Color.fromARGB(255, 143, 143, 143),
                   backgroundColor:
