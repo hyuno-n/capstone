@@ -11,11 +11,6 @@ import boto3
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
-import logging
-
-# 로깅 레벨을 ERROR로 설정하여 WARNING 및 INFO 메시지를 무시
-logging.basicConfig(level=logging.ERROR)
-
 
 # 환경 변수 로드 및 전역 상수 설정
 load_dotenv()
@@ -135,11 +130,12 @@ class EventDetector:
     def handle_event_detection(self, frame, predicted_label, user_id, camera_number):
         """이벤트 발생 감지 후 처리"""
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        if predicted_label in ['Fall', 'Movement', 'Black_smoke', 'Gray_smoke', 'White_smoke', 'Fire'] and not self.event_detected:
-            self.event_detected = True
-            self.frames_after_event = 0
-            print(f"{predicted_label} detected!")
-            self.send_alert(user_id, camera_number, predicted_label, timestamp)
+        if not self.event_detected or (self.frames_after_event > (self.post_event_length * 2)):
+            if predicted_label in ['Fall', 'Movement', 'Black_smoke', 'Gray_smoke', 'White_smoke', 'Fire']:
+                self.event_detected = True
+                self.frames_after_event = 0
+                print(f"{predicted_label} detected!")
+                self.send_alert(user_id, camera_number, predicted_label, timestamp)
 
         if self.event_detected:
             self.save_event_clip(predicted_label, frame, timestamp)
@@ -344,7 +340,7 @@ def process_video(user_id, camera_id, rtsp_url):
                         event_detector.fall_detection_count[track_id] = 0  # 또는 감소 로직을 원하면 조정 가능
 
                  # 낙상이 5회 이상 감지된 경우
-                if event_detector.fall_detection_count[track_id] >= 5:
+                if event_detector.fall_detection_count.get(track_id, 0) >= 5:
                     object_predictions[track_id] = 'Fall'
                     print(f"Track ID {track_id} - Fall detected!")
                 
