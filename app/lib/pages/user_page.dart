@@ -1,4 +1,5 @@
 import 'package:app/controller/log_controller.dart';
+import 'package:app/pages/bug_report_page.dart';
 import 'package:app/pages/notification_page.dart';
 import 'package:app/pages/user_setting_page.dart';
 import 'package:flutter/cupertino.dart';
@@ -302,7 +303,13 @@ class User_page extends StatelessWidget {
                     Icons.arrow_forward_ios,
                     size: 20,
                   ),
-                  onTap: () {},
+                  onTap: () {
+                    Navigator.of(context).push(
+                      CupertinoPageRoute(
+                        builder: (context) => const BugReportPage(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 10),
               ],
