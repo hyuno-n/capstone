@@ -25,7 +25,6 @@ class EventLog(db.Model):
     timestamp = db.Column(db.DateTime, default=datetime.utcnow)
     eventname = db.Column(db.String(50), nullable=False)
     camera_number = db.Column(db.Integer, nullable=False)
-    event_url = db.Column(db.String(255), nullable=True)
 
 class CameraInfo(db.Model):
     __tablename__ = 'cameras'
@@ -51,3 +50,14 @@ class DetectionStatus(db.Model):
     roi_y1 = db.Column(db.Integer, default=0)
     roi_x2 = db.Column(db.Integer, default=1920)
     roi_y2 = db.Column(db.Integer, default=1080)
+
+class VideoClip(db.Model):
+    __tablename__ = 'video_clips'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    camera_number = db.Column(db.Integer, nullable=False)
+    eventname = db.Column(db.String(50), nullable=False)
+    event_url = db.Column(db.String(255), nullable=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    user = db.relationship('User', backref='video_clips', lazy=True)
+

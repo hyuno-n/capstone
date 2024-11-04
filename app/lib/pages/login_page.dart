@@ -82,8 +82,13 @@ class _LoginState extends State<Login> {
           MaterialPageRoute(builder: (context) => const App()),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to login: ${response.body}')),
+        Get.snackbar(
+          "Login Failed",
+          "Failed to login: ${response.body}",
+          snackPosition: SnackPosition.TOP,
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.redAccent,
+          colorText: Colors.white,
         );
       }
     } catch (e) {

@@ -10,6 +10,7 @@ class LogController extends GetxController {
   late NotificationManager notificationManager;
   late SocketManager socketManager;
   var logs = <Map<String, String>>[].obs;
+  var videoClips = <Map<String, String>>[].obs;
   int detectionCount = 0;
   String currentUserId = '';
 
@@ -37,13 +38,19 @@ class LogController extends GetxController {
     String cameraNumber = data['camera_number']?.toString() ?? "N/A";
     String eventUrl = data['event_url'] ?? '';
 
-    // 로그 리스트에 새로운 이벤트 추가
     logs.add({
       'user_id': userId,
       'timestamp': timestamp,
       'eventname': eventname,
       'camera_number': cameraNumber,
-      'event_url': eventUrl,
+    });
+
+    videoClips.add({
+      'user_id': userId,
+      'timestamp': timestamp,
+      'eventname': eventname,
+      'camera_number': cameraNumber,
+      'event_url': eventUrl
     });
 
     // 새로운 알림 수 증가
@@ -83,6 +90,38 @@ class LogController extends GetxController {
     }
   }
 
+  Future<void> fetchVideoClips(String userId) async {
+    isLoading.value = true;
+    hasError.value = false;
+
+    final String? flaskIp = dotenv.env['FLASK_IP'];
+    final String? flaskPort = dotenv.env['FLASK_PORT'];
+    final String url =
+        'http://$flaskIp:$flaskPort/get_user_video_clips/$userId';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        List<dynamic> fetchedClips = jsonDecode(response.body);
+        videoClips.value = fetchedClips.map((dynamic clip) {
+          return {
+            'user_id': clip['user_id']?.toString() ?? '',
+            'timestamp': clip['timestamp']?.toString() ?? '',
+            'eventname': clip['eventname']?.toString() ?? '',
+            'camera_number': clip['camera_number']?.toString() ?? '',
+            'event_url': clip['event_url']?.toString() ?? ''
+          };
+        }).toList();
+
+        isLoading.value = false;
+      } else {
+        _handleFetchError();
+      }
+    } catch (e) {
+      _handleFetchError();
+    }
+  }
+
   void _handleFetchError() {
     hasError.value = true;
     isLoading.value = false;
@@ -105,9 +144,9 @@ class LogController extends GetxController {
         body: jsonEncode({'user_id': currentUserId}),
       );
       if (response.statusCode == 200) {
-        logs.clear();
+        videoClips.clear();
         detectionCount = 0;
-        newNotificationCount.value = 0; // 알림 수 리셋
+        newNotificationCount.value = 0;
         print('Logs cleared successfully');
       } else {
         print('Failed to clear logs: ${response.body}');
@@ -129,8 +168,8 @@ class LogController extends GetxController {
         body: jsonEncode({'user_id': userId, 'timestamp': timestamp}),
       );
       if (response.statusCode == 200) {
-        logs.removeWhere(
-            (log) => log['user_id'] == userId && log['timestamp'] == timestamp);
+        videoClips.removeWhere((video) =>
+            video['user_id'] == userId && video['timestamp'] == timestamp);
         print('Log deleted successfully');
       } else {
         print('Failed to delete log: ${response.body}');

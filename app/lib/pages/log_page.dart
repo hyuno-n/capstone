@@ -23,7 +23,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-    _logController.fetchLogs(_userController.username.value);
+    _logController.fetchVideoClips(_userController.username.value);
 
     // 애니메이션 컨트롤러 초기화
     _controller = AnimationController(
@@ -146,7 +146,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
         ),
       ),
       body: Obx(() {
-        if (_logController.logs.isEmpty) {
+        if (_logController.videoClips.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -171,7 +171,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
           return Column(
             children: [
               Expanded(
-                child: LogList(logs: _logController.logs),
+                child: LogList(videoclips: _logController.videoClips),
               ),
             ],
           );

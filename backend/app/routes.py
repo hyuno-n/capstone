@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, jsonify, current_app, Flask
 from flask_socketio import emit, SocketIO
 from werkzeug.security import generate_password_hash, check_password_hash
-from .models import User, EventLog, CameraInfo, DetectionStatus
+from .models import User, EventLog, CameraInfo, DetectionStatus, VideoClip
 from . import db, socketio
 from datetime import datetime, timedelta
 import os
@@ -92,10 +92,6 @@ def login():
                 'y2': detection_status.roi_y2 if detection_status else 1080, 
             }
         })
-
-    print(cameras)
-
-
     return jsonify({"message" : "Login successful",
                     "email" : user.email,
                     "cameras": cameras}), 200
@@ -142,8 +138,17 @@ def log_event():
         return jsonify({"error": "Missing user_id"}), 400
 
     # EventLog에 user_id를 포함하여 생성
-    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number,event_url = event_url)
+    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number)
     db.session.add(new_event)
+
+    new_video_clip = VideoClip(
+        user_id=user_id,
+        camera_number=camera_number,
+        eventname=eventname,
+        event_url=event_url,
+        timestamp=timestamp
+    )
+    db.session.add(new_video_clip)
     db.session.commit()
 
     # SocketIO를 통해 이벤트 푸시
@@ -162,10 +167,20 @@ def log_event():
 def get_user_events(user_id):
     events = EventLog.query.filter_by(user_id=user_id).all()
     event_list = [
-        {"user_id": event.user_id, "timestamp": event.timestamp.isoformat(), "eventname": event.eventname, "camera_number": event.camera_number, "event_url": event.event_url}
+        {"user_id": event.user_id, "timestamp": event.timestamp.isoformat(), "eventname": event.eventname, "camera_number": event.camera_number}
         for event in events
     ]
     return jsonify(event_list), 200
+
+# get_user_events 엔드포인트
+@bp.route('/get_user_video_clips/<user_id>', methods=['GET'])
+def get_user_video_clips(user_id):
+    videoclips = VideoClip.query.filter_by(user_id=user_id).all()
+    video_list = [
+        {"user_id": video.user_id, "timestamp": video.timestamp.isoformat(), "eventname": video.eventname, "camera_number": video.camera_number, 'event_url' : video.event_url}
+        for video in videoclips
+    ]
+    return jsonify(video_list), 200
 
 # get_users 엔드포인트
 @bp.route('/get_users', methods=['GET'])
@@ -185,14 +200,14 @@ def delete_user_events():
         return jsonify({"error": "Missing user_id"}), 400
 
     user_id = data['user_id']
-    events = EventLog.query.filter_by(user_id=user_id).all()
+    events = VideoClip.query.filter_by(user_id=user_id).all()
 
     for event in events:
         if event.event_url:
             file_key = event.event_url.split('/')[-1]
             delete_file_from_s3(file_key)
 
-    EventLog.query.filter_by(user_id=user_id).delete()
+    VideoClip.query.filter_by(user_id=user_id).delete()
     db.session.commit()
 
     return jsonify({"message": "User events deleted"}), 200
@@ -210,7 +225,7 @@ def delete_log():
     except ValueError:
         return jsonify({"error": "Invalid timestamp format"}), 400
 
-    event = EventLog.query.filter_by(user_id=user_id, timestamp=timestamp).first()
+    event = VideoClip.query.filter_by(user_id=user_id, timestamp=timestamp).first()
 
     if event:
         # S3 파일 삭제

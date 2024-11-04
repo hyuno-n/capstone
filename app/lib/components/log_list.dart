@@ -10,22 +10,22 @@ import 'dart:ui';
 import 'package:flutter/services.dart';
 
 class LogList extends StatelessWidget {
-  final List<Map<String, String>> logs;
+  final List<Map<String, String>> videoclips;
   final LogController logController = Get.find<LogController>();
 
-  LogList({super.key, required this.logs});
+  LogList({super.key, required this.videoclips});
 
   Map<String, List<Map<String, String>>> _groupLogsByDate() {
     Map<String, List<Map<String, String>>> groupedLogs = {};
 
-    for (var log in logs) {
-      DateTime dateTime = DateTime.parse(log['timestamp']!);
+    for (var videoclip in videoclips) {
+      DateTime dateTime = DateTime.parse(videoclip['timestamp']!);
       String dateKey = DateFormat('yy.MM.dd').format(dateTime);
 
       if (groupedLogs[dateKey] == null) {
         groupedLogs[dateKey] = [];
       }
-      groupedLogs[dateKey]!.add(log);
+      groupedLogs[dateKey]!.add(videoclip);
     }
 
     groupedLogs.forEach((key, value) {
@@ -61,12 +61,12 @@ class LogList extends StatelessWidget {
                       fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ),
-              ...dateLogs.map((log) {
-                DateTime dateTime = DateTime.parse(log['timestamp']!);
+              ...dateLogs.map((videoclips) {
+                DateTime dateTime = DateTime.parse(videoclips['timestamp']!);
                 String formattedTime = DateFormat('HH:mm:ss').format(dateTime);
 
                 String eventIcon;
-                switch (log['eventname']) {
+                switch (videoclips['eventname']) {
                   case 'Movement':
                     eventIcon = 'assets/images/suspect_icon.gif';
                     break;
@@ -90,9 +90,10 @@ class LogList extends StatelessWidget {
                     child: const Icon(Icons.delete, color: Colors.white),
                   ),
                   onDismissed: (direction) {
-                    logController.deleteLog(log['user_id']!, log['timestamp']!);
-                    logs.removeWhere(
-                        (item) => item['timestamp'] == log['timestamp']);
+                    logController.deleteLog(
+                        videoclips['user_id']!, videoclips['timestamp']!);
+                    dateLogs.removeWhere(
+                        (item) => item['timestamp'] == videoclips['timestamp']);
                     logController.update();
                   },
                   child: ListTile(
@@ -112,12 +113,12 @@ class LogList extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          log['eventname']!,
+                          videoclips['eventname']!,
                           style: const TextStyle(
                               fontWeight: FontWeight.bold, fontSize: 20),
                         ),
                         Text(
-                          'Camera ${cameraProvider.getCameraIndex(int.parse(log['camera_number']!))}',
+                          'Camera ${cameraProvider.getCameraIndex(int.parse(videoclips['camera_number']!))}',
                           style: TextStyle(color: Colors.grey[700]),
                         ),
                         Text(
@@ -127,7 +128,7 @@ class LogList extends StatelessWidget {
                       ],
                     ),
                     onTap: () {
-                      _showFullScreenVideo(context, log['event_url']!);
+                      _showFullScreenVideo(context, videoclips['event_url']!);
                     },
                   ),
                 );
