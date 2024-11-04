@@ -11,6 +11,11 @@ import boto3
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import logging
+
+# 로깅 레벨을 ERROR로 설정하여 WARNING 및 INFO 메시지를 무시
+logging.basicConfig(level=logging.ERROR)
+
 
 # 환경 변수 로드 및 전역 상수 설정
 load_dotenv()
@@ -35,7 +40,7 @@ fps = 30
 buffer_length, post_event_length = 10 * fps, 10 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
-lstm_model = load_model('model/lstm_keypoints_model_improved1.h5')
+lstm_model = load_model('model/final_lstm_model.h5')
 yolo_model = YOLO("model/yolo11s-pose.pt")
 fire_detect_model = YOLO("model/yolo11n-fire.pt")
 classes = ['Fall', 'Normal']
@@ -202,10 +207,13 @@ def detect_people_and_keypoints(frame):
     track_ids, keypoints_list = [], []
     
     try:
-        results = yolo_model.track(frame, persist=True)
+        results = yolo_model.track(frame, persist=True, verbose=False)
         keypoints = results[0].keypoints
         boxes = results[0].boxes.xyxy.cpu().numpy()
-        track_ids = results[0].boxes.id.int().cpu().tolist()
+        if results[0].boxes.id is not None:
+            track_ids = results[0].boxes.id.int().cpu().tolist()
+        else:
+            track_ids = []  # None일 경우 기본값으로 빈 리스트 할당
         
         update_track_history(boxes, track_ids)
         if keypoints is not None:
@@ -250,15 +258,14 @@ def update_track_history(boxes, track_ids):
         if len(track_history[track_id]) > 30:
             track_history[track_id].pop(0)
 
-def draw_skeletons_and_boxes(frame, keypoints_list, boxes):
+def draw_skeletons_and_boxes(frame, keypoint, box):
     """프레임에 스켈레톤과 경계 상자 그리기"""
-    for box in boxes:
+    if box is not None:
         x1, y1, x2, y2 = map(int, box)
         cv2.rectangle(frame, (x1, y1), (x2, y2), GREEN, 2)
 
-    for keypoints in keypoints_list:
-        for (x, y) in keypoints:
-            cv2.circle(frame, (int(x), int(y)), 3, GREEN, -1)
+    for (x, y) in keypoint:
+        cv2.circle(frame, (int(x), int(y)), 3, GREEN, -1)
     
     return frame
 
@@ -342,7 +349,7 @@ def process_video(user_id, camera_id, rtsp_url):
                     print(f"Track ID {track_id} - Fall detected!")
                 
                 for (x, y) in keypoints:
-                    if is_in_detection_area(x, y):  # ROI 내에 있는지 확인
+                    if is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):  # ROI 내에 있는지 확인
                         detected_in_roi.append(track_id)  # ROI 내에서 감지된 track_id를 추가
                         break  # ROI 내에 있는 점이 있으면 감지 성공으로 처리
                     
@@ -357,17 +364,20 @@ def process_video(user_id, camera_id, rtsp_url):
                     # 라벨을 박스의 왼쪽 위에 표시
                     cv2.putText(frame, object_predictions[track_id], (x1, y1 - 10), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
-                
+                    
                     # 해당 객체의 키포인트 그리기
                     draw_skeletons_and_boxes(frame, keypoints_list[index], box)
-                event_detector.handle_event_detection(frame, object_predictions[track_id])
+
+                    # 이벤트 발생 처리 함수
+                    event_detector.handle_event_detection(frame, object_predictions[track_id], user_id, camera_id)
+            
 
             # 추적 경로 그리기
             for track_id, track in track_history.items():
                 if track:
                     points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                     cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-
+                    
         # 움직임 감지
         if camera_settings['movement_detection_on']:
             frame, motion_detected = detect_movement(frame)
@@ -380,7 +390,7 @@ def process_video(user_id, camera_id, rtsp_url):
             fire_detected_in_roi = False
             for box in fire_predictions.boxes:
                 x1, y1, x2, y2 = map(int, box.xyxy[0])
-                if is_in_detection_area(x1, y1, x2, y2):
+                if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
                     fire_detected_in_roi = True
                     break
 
