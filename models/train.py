@@ -1,10 +1,15 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Conv1D, MaxPooling1D, BatchNormalization
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional, Conv1D, MaxPooling1D
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import matplotlib.pyplot as plt
+
+# GPU 사용 여부 확인
+physical_devices = tf.config.list_physical_devices('GPU')
+if physical_devices:
+    tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # 클래스 레이블 설정
 classes = ['넘어짐', '정상']
@@ -29,14 +34,18 @@ input_shape = (num_keypoints, 2)
 model = Sequential()
 model.add(Conv1D(64, kernel_size=3, activation='relu', input_shape=input_shape))
 model.add(MaxPooling1D(pool_size=2))
-model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.002))))  # L2 정규화값 증가
-model.add(Dropout(0.4))  # Dropout 증가
+model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=l2(0.002))))
+model.add(Dropout(0.5))  # 드롭아웃 비율 증가
 model.add(Bidirectional(LSTM(64, return_sequences=False, kernel_regularizer=l2(0.002))))
-model.add(Dropout(0.4))  # Dropout 증가
-model.add(Dense(len(classes), activation='softmax'))
+model.add(Dropout(0.5))  # 드롭아웃 비율 증가
+model.add(Dense(128, activation='relu'))  # 추가 Dense 레이어
+model.add(Dense(len(classes), activation='softmax'))  # 최종 클래스 수에 맞춰 조정
 
-model.compile(optimizer=tf.keras.optimizers.AdamW(learning_rate=0.0001), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+# 옵티마이저 설정
+optimizer = tf.keras.optimizers.AdamW(learning_rate=0.0001)
 
+# 모델 컴파일
+model.compile(optimizer=optimizer, loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
 # 모델 요약 출력
 model.summary()

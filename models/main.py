@@ -303,32 +303,55 @@ def process_video(user_id, camera_id, rtsp_url):
         # 넘어짐 감지
         if camera_settings['fall_detection_on']:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
-            predicted_label = default_class
-            detected_in_roi = False 
+            detected_in_roi = []  # 여러 객체가 ROI 내에서 감지되었는지 확인하기 위한 리스트
+            predictions = {}  # 각 객체의 예측을 저장할 딕셔너리
             
             for keypoints, track_id in zip(keypoints_list, track_ids):
+                predicted_label = default_class
+                # 키포인트가 기본값일 때의 처리 (예: 이벤트 감지 건너뛰기)
+                if np.all(keypoints == (0, 0)):  # 기본값일 경우
+                    continue  # 또는 적절한 다른 처리를 수행
+
                 preprocessed_keypoints = preprocess_keypoints(keypoints)
                 preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
+
+                # LSTM 모델을 사용하여 예측
                 predictions = lstm_model.predict(preprocessed_keypoints)
+
                 predicted_class = np.argmax(predictions, axis=1)[0]
                 predicted_label = classes[predicted_class]
+
+                # 객체가 감지된 경우, 객체 추적 정보에 업데이트
                 object_predictions[track_id] = predicted_label
                 
                 for (x, y) in keypoints:
-                    if is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):  # ROI 내에 있는지 확인
-                        detected_in_roi = True  # ROI 내에서 감지됨
-                        break  # 한 번이라도 ROI 안에 있는 점이 있으면 감지 성공으로 처리
-                        
-            if detected_in_roi:
-                event_detector.handle_event_detection(frame, predicted_label, user_id, camera_id)
-                frame = draw_skeletons_and_boxes(frame, preprocessed_keypoints, boxes)
-                for track_id, track in track_history.items():
-                    if track:
-                        points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
-                        cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-                    if track_id in object_predictions:
-                        cv2.putText(frame, object_predictions[track_id], (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                    if is_in_detection_area(x, y):  # ROI 내에 있는지 확인
+                        detected_in_roi.append(track_id)  # ROI 내에서 감지된 track_id를 추가
+                        break  # ROI 내에 있는 점이 있으면 감지 성공으로 처리
+                    
+            # ROI 내에서 감지된 객체에 대해 이벤트 감지 및 시각화
+            for track_id in detected_in_roi:
+                event_detector.handle_event_detection(frame, object_predictions[track_id])
+                
+                # 해당 객체에 대한 박스 및 키포인트 그리기
+                if track_id in track_ids:
+                    index = track_ids.index(track_id)
+                    box = boxes[index]  # 현재 track_id에 해당하는 경계 상자를 찾음
+                    x1, y1, _, _ = map(int, box)  # 좌상단 좌표 사용
+                    
+                    # 라벨을 박스의 왼쪽 위에 표시
+                    cv2.putText(frame, object_predictions[track_id], (x1, y1 - 10), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 0, 0), 2, cv2.LINE_AA)
+                
+                    # 해당 객체의 키포인트 그리기
+                    draw_skeletons_and_boxes(frame, keypoints_list[index], box)
 
+            # 추적 경로 그리기
+            for track_id, track in track_history.items():
+                if track:
+                    points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
+                    cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
+                    
         # 움직임 감지
         if camera_settings['movement_detection_on']:
             frame, motion_detected = detect_movement(frame)
