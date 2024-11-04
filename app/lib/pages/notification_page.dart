@@ -204,6 +204,36 @@ class _NotificationPageState extends State<NotificationPage>
                   ],
                 );
               }).toList(),
+              Row(
+                children: [
+                  const Expanded(
+                    child: Divider(
+                      color: Colors.grey,
+                      height: 0.5,
+                      thickness: 1,
+                      indent: 28,
+                      endIndent: 5,
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10.0), // 텍스트 양옆 여백
+                    child: Text(
+                      '7일 전 알림까지 확인할 수 있어요',
+                      style: TextStyle(color: Colors.grey[600]),
+                    ),
+                  ),
+                  const Expanded(
+                    child: Divider(
+                      color: Colors.grey,
+                      height: 0.5,
+                      thickness: 1,
+                      indent: 5,
+                      endIndent: 28, // 오른쪽 여백
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         );

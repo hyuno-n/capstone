@@ -53,8 +53,8 @@ class _HowToUseAppPageState extends State<HowToUseAppPage> {
             effect: JumpingDotEffect(
               activeDotColor: const Color.fromARGB(255, 24, 24, 24),
               dotColor: const Color.fromARGB(255, 165, 165, 165),
-              dotHeight: 30,
-              dotWidth: 30,
+              dotHeight: 25,
+              dotWidth: 25,
               spacing: 16,
               verticalOffset: 50,
             ),

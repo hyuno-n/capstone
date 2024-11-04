@@ -114,7 +114,7 @@ class UserSettingPage extends StatelessWidget {
               style: TextStyle(fontSize: 18),
             ),
             trailing: Text(
-              "Beta Test",
+              "알파 버전",
               style: TextStyle(fontSize: 18, color: Colors.grey[500]),
             ),
           ),

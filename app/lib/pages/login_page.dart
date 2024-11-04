@@ -112,11 +112,12 @@ class _LoginState extends State<Login> {
             child: Column(
               children: [
                 const SizedBox(height: 40),
-                const Icon(
-                  Icons.lock,
-                  size: 100,
+                Image.asset(
+                  "assets/images/lock_icon.png",
+                  width: 135,
+                  height: 135,
                 ),
-                const SizedBox(height: 50),
+                const SizedBox(height: 15),
                 Text(
                   'welcome back, you\'ve been missed!',
                   style: TextStyle(

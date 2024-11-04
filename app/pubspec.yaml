@@ -133,6 +133,9 @@ flutter:
     - assets/images/toggle_icon.png
     - assets/images/chat_icon.png
     - assets/images/heart_icon.png
+    - assets/images/shield_icon.png
+    - assets/images/lock_icon.png
+    - assets/images/check_icon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
