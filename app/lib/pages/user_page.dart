@@ -1,5 +1,6 @@
 import 'package:app/controller/log_controller.dart';
 import 'package:app/pages/notification_page.dart';
+import 'package:app/pages/user_setting_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:app/controller/user_controller.dart';
@@ -12,7 +13,7 @@ class User_page extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final UserController userController = Get.find();
+    final UserController userController = Get.find<UserController>();
     final cameraProvider =
         Provider.of<CameraProvider>(context); // CameraProvider 인스턴스 가져오기
     final logController = Get.find<LogController>();
@@ -104,27 +105,36 @@ class User_page extends StatelessWidget {
       ),
       // endDrawer: const DrawerWidget(),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center, // 가로 방향 중앙 정렬
         children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 20.0, left: 20.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                const CircleAvatar(
-                  radius: 40,
-                  backgroundImage:
-                      AssetImage('assets/images/user_page_profile.jpg'),
-                ),
-                const SizedBox(width: 20),
-                Text(
-                  userController.username.value,
-                  style: const TextStyle(fontSize: 20),
-                ),
-              ],
+          const SizedBox(height: 20), // 위쪽 여백 추가
+          Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(22),
+              color: Color.fromARGB(255, 66, 66, 66),
+            ),
+            padding: EdgeInsets.all(18),
+            child: const Icon(
+              Icons.person,
+              color: Colors.white,
+              size: 60,
             ),
           ),
-          const SizedBox(height: 25),
+          const SizedBox(height: 18), // 프로필 사진과 이름 사이의 간격
+          Text(
+            userController.username.value,
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4), // 아래쪽 여백 추가
+          Text(
+            userController.getEmail,
+            style: TextStyle(
+              fontSize: 15,
+              color: Colors.grey[600],
+            ),
+          ),
+          const SizedBox(height: 25), // 아래쪽 여백 추가
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 10.0),
             child: Container(
@@ -260,18 +270,38 @@ class User_page extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 10.0),
               children: [
                 ListTile(
-                  leading: Image.asset('assets/images/setting_icon.gif',
-                      width: 30, height: 30),
-                  title: const Text('설정'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () {},
+                  leading: const Icon(Icons.settings),
+                  title: const Text(
+                    '설정',
+                    style: TextStyle(fontSize: 17),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 20,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).push(
+                      CupertinoPageRoute(
+                        builder: (context) => const UserSettingPage(),
+                      ),
+                    );
+                  },
                 ),
                 const SizedBox(height: 10),
                 ListTile(
-                  leading: Image.asset('assets/images/notice_icon.gif',
-                      width: 30, height: 30),
-                  title: const Text('공지사항'),
-                  trailing: const Icon(Icons.arrow_forward_ios),
+                  leading: const Icon(
+                    Icons.bug_report,
+                  ),
+                  title: const Text(
+                    '버그 리포트',
+                    style: TextStyle(
+                      fontSize: 17,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.arrow_forward_ios,
+                    size: 20,
+                  ),
                   onTap: () {},
                 ),
                 const SizedBox(height: 10),
