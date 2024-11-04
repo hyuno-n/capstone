@@ -1,3 +1,4 @@
+import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/roi_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -10,6 +11,7 @@ import 'package:provider/provider.dart';
 
 Future<void> main() async {
   await dotenv.load(fileName: ".env");
+  Get.put(UserController()); // UserController를 GetX에 등록
   runApp(
     MultiProvider(
       providers: [
