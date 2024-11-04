@@ -1,4 +1,5 @@
 // import 'package:app/controller/user_controller.dart';
+import 'package:app/pages/account_leave_page.dart';
 import 'package:app/pages/user_detail_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +87,10 @@ class UserSettingPage extends StatelessWidget {
             ),
             onTap: () {
               // 여기에 탈퇴하기로 이동하는 코드 추가
+              // AccountLeavePage로 이동
+              Navigator.of(context).push(CupertinoPageRoute(
+                builder: (context) => const AccountLeavePage(),
+              ));
             },
           ),
           const SizedBox(height: 50),
