@@ -3,7 +3,6 @@ import 'package:app/usePage/page_2.dart';
 import 'package:app/usePage/page_3.dart';
 import 'package:app/usePage/page_4.dart';
 import 'package:app/usePage/page_5.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
@@ -46,22 +45,22 @@ class _FirstLoginState extends State<FirstLogin> {
               ],
             ),
           ),
-          SizedBox(
+          const SizedBox(
             height: 20,
           ),
           SmoothPageIndicator(
             controller: _controller,
             count: 5,
-            effect: JumpingDotEffect(
-              activeDotColor: const Color.fromARGB(255, 24, 24, 24),
-              dotColor: const Color.fromARGB(255, 165, 165, 165),
+            effect: const JumpingDotEffect(
+              activeDotColor: Color.fromARGB(255, 24, 24, 24),
+              dotColor: Color.fromARGB(255, 165, 165, 165),
               dotHeight: 25,
               dotWidth: 25,
               spacing: 16,
               verticalOffset: 50,
             ),
           ),
-          SizedBox(
+          const SizedBox(
             height: 60,
           ),
         ],

@@ -1,3 +1,4 @@
+import 'package:app/pages/first_login.dart';
 import 'package:app/provider/camera_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -11,7 +12,6 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:provider/provider.dart';
 import 'package:app/pages/forgot_password_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:app/pages/how_to_use_app_page.dart';
 
 class Login_Page extends StatelessWidget {
   const Login_Page({super.key});
@@ -91,7 +91,7 @@ class _LoginState extends State<Login> {
           await prefs.setBool('seenHowToUseAppPage_$currentUserId', true);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => const HowToUseAppPage()),
+            MaterialPageRoute(builder: (context) => const FirstLogin()),
           );
         } else {
           // 이미 본 경우 바로 메인 페이지로 이동
@@ -231,8 +231,7 @@ class _LoginState extends State<Login> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) =>
-                                const SignUpPage(), // !!여기 원래 SignUpPage 이거 들어가야함!!
+                            builder: (context) => SignUpPage(),
                           ),
                         );
                       },

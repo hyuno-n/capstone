@@ -144,7 +144,7 @@ def log_event():
         return jsonify({"error": "Missing user_id"}), 400
 
     # EventLog에 user_id를 포함하여 생성
-    new_event = EventLog(user_id=user_id, timestamp=timestamp, eventname=eventname, camera_number=camera_number)
+    new_event = EventLog(user_id=user_id, timestamp=formatted_timestamp, eventname=eventname, camera_number=camera_number)
     db.session.add(new_event)
 
     new_video_clip = VideoClip(

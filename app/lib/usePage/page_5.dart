@@ -83,9 +83,9 @@ class _Page5State extends State<Page5> with SingleTickerProviderStateMixin {
                     child: TextButton(
                       onPressed: () {
                         // App() 페이지로 내비게이션
-                        Navigator.pushReplacement(
-                          context,
+                        Navigator.of(context).pushAndRemoveUntil(
                           MaterialPageRoute(builder: (context) => const App()),
+                          (Route<dynamic> route) => false,
                         );
                       },
                       child: const Text(
