@@ -9,6 +9,7 @@ import requests
 from flask_cors import CORS
 import boto3
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import or_, func
 
 bp = Blueprint('main', __name__)
 def get_s3_client():
@@ -69,6 +70,7 @@ def login():
     id = data.get('id')
     password = data.get('password')
 
+
     user = User.query.filter_by(id=id).first()
 
     if user is None or not user.check_password(password):
@@ -95,6 +97,7 @@ def login():
         })
     return jsonify({"message" : "Login successful",
                     "email" : user.email,
+                    'phone' : user.phone,
                     "cameras": cameras}), 200
 
 @bp.route('/get_max_camera_number',methods = ['GET'])
@@ -445,7 +448,7 @@ def check_user():
     if not user_id:
         return jsonify({"error": "No ID provided"}), 400
     
-    user = User.query.filter_by(name=user_id).first()
+    user = User.query.filter_by(id=user_id).first()
     
     if user:
         return jsonify({"exists": True}), 200
@@ -474,21 +477,39 @@ def update_password():
 @bp.route('/find_user_id', methods=['POST'])
 def find_user_id():
     data = request.get_json()
-    name = data.get('name')
-    contact = data.get('contact')  # 이메일 또는 휴대폰 번호
+    user_name = data.get('name')
+    contact = data.get('contact')
 
-    if not name or not contact:
+    if not user_name or not contact:
         return jsonify({"error": "Name or contact information missing"}), 400
 
-    # 이름과 이메일 또는 휴대폰 번호로 사용자 검색
-    user = User.query.filter_by(name=name).filter(
-        (User.email == contact) | (User.phone == contact)
-    ).first()
+    try:
+        # 공백 제거 후 다시 할당
+        user_name = user_name.strip()
+        contact = contact.strip()
 
-    if user:
-        return jsonify({"user_id": user.id}), 200
-    else:
-        return jsonify({"error": "User not found"}), 404
+        # 사용자 검색 쿼리 실행 및 디버깅 로그 추가
+        user = User.query.filter(
+            func.binary(User.name) == user_name
+        ).filter(
+            or_(
+                func.binary(User.email) == contact,
+                func.binary(User.phone) == contact
+            )
+        ).first()
+
+        # 검색 결과 로그
+        print(f"User found: {user}") if user else print("User not found")
+
+        if user:
+            return jsonify({"user_id": user.id}), 200
+        else:
+            return jsonify({"error": "User not found"}), 404
+
+    except Exception as e:
+        # 예외 발생 시 로그 출력
+        print(f"Error occurred: {e}")
+        return jsonify({"error": "An error occurred during processing"}), 500
 
 @bp.route('/verify_user_for_password_reset', methods=['POST'])
 def verify_user_for_password_reset():
@@ -508,3 +529,42 @@ def verify_user_for_password_reset():
         return jsonify({"verification": "success"}), 200
     else:
         return jsonify({"error": "User verification failed"}), 404
+    
+@bp.route('/delete_user/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    try:
+        # 사용자 검색
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # 관련된 데이터 삭제
+        # 1. CameraInfo 삭제
+        cameras = CameraInfo.query.filter_by(user_id=user_id).all()
+        for camera in cameras:
+            db.session.delete(camera)
+
+        # 2. DetectionStatus 삭제
+        detection_statuses = DetectionStatus.query.filter_by(user_id=user_id).all()
+        for status in detection_statuses:
+            db.session.delete(status)
+
+        # 3. EventLog 삭제
+        events = EventLog.query.filter_by(user_id=user_id).all()
+        for event in events:
+            db.session.delete(event)
+
+        # 4. VideoClip 삭제
+        videoclips = VideoClip.query.filter_by(user_id=user_id).all()
+        for video in videoclips:
+            db.session.delete(video)
+
+        # 사용자 삭제
+        db.session.delete(user)
+        db.session.commit()
+
+        return jsonify({"message": "User and related data deleted successfully"}), 200
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error occurred: {e}")
+        return jsonify({"error": str(e)}), 500

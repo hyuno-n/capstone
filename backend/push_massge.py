@@ -10,9 +10,9 @@ load_dotenv()
 def push_message():
     url = f"http://{os.getenv('FLASK_APP_IP', '0.0.0.0')}:{os.getenv('FLASK_APP_PORT', '5000')}/log_event"
     data = {
-        'user_id': 'qkreogus',
-        'timestamp': '2024-11-04 02:55:00',
-        'eventname': 'Movement',
+        'user_id': 'inyeoung',
+        'timestamp': '2024-11-03 02:55:00',
+        'eventname': 'Fire',
         'camera_number': 1,
     }
 

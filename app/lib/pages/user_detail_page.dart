@@ -130,7 +130,7 @@ class UserDetailPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4), // 간격 추가
                       Text(
-                        '이름', // 전화번호
+                        userController.getPhone, // 전화번호
                         style: TextStyle(fontSize: 20, color: Colors.grey[900]),
                       ),
                       const SizedBox(height: 30), // 간격 추가

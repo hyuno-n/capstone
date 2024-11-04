@@ -14,11 +14,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
 
   int _selectedTabIndex = 0; // 0: 아이디 찾기, 1: 비밀번호 찾기
   bool _isEmailSelected = true; // 이메일 인증과 휴대폰 인증 구분
+  bool _isVerified = false; // 인증 완료 여부
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _idController = TextEditingController();
   final TextEditingController _emailOrPhoneController = TextEditingController();
-  final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _newPasswordController = TextEditingController();
+  final TextEditingController _confirmPasswordController =
+      TextEditingController();
 
   late AnimationController _animationController;
   late Animation<Offset> _shakeAnimation;
@@ -42,57 +45,110 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     _animationController.forward(from: 0);
   }
 
+  void _resetFields() {
+    _nameController.clear();
+    _idController.clear();
+    _emailOrPhoneController.clear();
+    _newPasswordController.clear();
+    _confirmPasswordController.clear();
+    _isVerified = false;
+    _isEmailSelected = true; // 인증 방법 초기화
+  }
+
   bool _validateFields() {
-    if (_selectedTabIndex == 1 && _usernameController.text.isEmpty) {
-      showWarningDialog(context, '아이디를 입력하세요.');
-      return false;
-    }
-    if (_nameController.text.isEmpty) {
-      showWarningDialog(context, '이름을 입력하세요.');
-      return false;
-    }
-    if (_emailOrPhoneController.text.isEmpty) {
-      showWarningDialog(
-          context, _isEmailSelected ? '이메일을 입력하세요.' : '휴대폰 번호를 입력하세요.');
-      return false;
-    }
-    if (_selectedTabIndex == 1 && _newPasswordController.text.isEmpty) {
-      showWarningDialog(context, '새 비밀번호를 입력하세요.');
-      return false;
+    if (_selectedTabIndex == 0) {
+      // 아이디 찾기 탭에서의 입력 검증
+      if (_nameController.text.isEmpty) {
+        showWarningDialog(context, '이름을 입력하세요.', '입력 오류');
+        return false;
+      }
+      if (_emailOrPhoneController.text.isEmpty) {
+        showWarningDialog(context,
+            _isEmailSelected ? '이메일을 입력하세요.' : '휴대폰 번호를 입력하세요.', '입력 오류');
+        return false;
+      }
+    } else if (_selectedTabIndex == 1) {
+      // 비밀번호 찾기 탭에서의 입력 검증
+      if (!_isVerified) {
+        if (_nameController.text.isEmpty) {
+          showWarningDialog(context, '이름을 입력하세요.', '입력 오류');
+          return false;
+        }
+        if (_idController.text.isEmpty) {
+          showWarningDialog(context, '아이디를 입력하세요.', '입력 오류');
+          return false;
+        }
+        if (_emailOrPhoneController.text.isEmpty) {
+          showWarningDialog(context,
+              _isEmailSelected ? '이메일을 입력하세요.' : '휴대폰 번호를 입력하세요.', '입력 오류');
+          return false;
+        }
+      } else {
+        // 인증 후 비밀번호 변경 필드 검증
+        if (_newPasswordController.text.isEmpty) {
+          showWarningDialog(context, '새 비밀번호를 입력하세요.', '입력 오류');
+          return false;
+        }
+        if (_confirmPasswordController.text.isEmpty) {
+          showWarningDialog(context, '비밀번호 확인을 입력하세요.', '입력 오류');
+          return false;
+        }
+        if (_newPasswordController.text != _confirmPasswordController.text) {
+          showWarningDialog(context, '비밀번호가 일치하지 않습니다.', '입력 오류');
+          return false;
+        }
+      }
     }
     return true;
   }
 
   void _handleSubmit() {
     if (_validateFields()) {
+      final contact = _emailOrPhoneController.text.trim();
+
       if (_selectedTabIndex == 0) {
-        // 아이디 찾기
-        _controller.findUserId(
-          context,
-          _nameController.text,
-          _emailOrPhoneController.text,
-        );
-      } else {
-        // 비밀번호 찾기 (사용자 인증 후 비밀번호 변경)
-        _controller
-            .verifyUserForPasswordReset(
-          context,
-          _usernameController.text,
-          _emailOrPhoneController.text,
-        )
-            .then((_) {
-          if (_newPasswordController.text.isNotEmpty) {
-            _controller.updatePassword(
-              context,
-              _usernameController.text,
-              _newPasswordController.text,
-            );
-          }
-        });
+        if (!_isVerified) {
+          _controller
+              .findUserId(
+            context,
+            _nameController.text.trim(),
+            contact,
+          )
+              .then((_) {
+            setState(() {
+              _isVerified = true;
+            });
+          });
+        }
+      } else if (_selectedTabIndex == 1) {
+        if (!_isVerified) {
+          _controller
+              .verifyUserForPasswordReset(
+            context,
+            _idController.text.trim(),
+            contact,
+          )
+              .then((isVerified) {
+            if (isVerified) {
+              setState(() {
+                _isVerified = true;
+              });
+              _showVerificationSuccessDialog(); // 인증 완료 다이얼로그 호출
+            }
+          });
+        }
       }
     } else {
       _shakeForm();
     }
+  }
+
+  void _handleTabChange(int index) {
+    setState(() {
+      _selectedTabIndex = index;
+      _isVerified = false;
+      _resetFields();
+    });
   }
 
   @override
@@ -100,8 +156,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     _animationController.dispose();
     _nameController.dispose();
     _emailOrPhoneController.dispose();
-    _usernameController.dispose();
+    _idController.dispose();
     _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -126,16 +183,17 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              '아이디 • 비밀번호 찾기',
-              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildTabButton('아이디 찾기', 0),
-                _buildTabButton('비밀번호 찾기', 1),
+                GestureDetector(
+                  onTap: () => _handleTabChange(0),
+                  child: _buildTabButton('아이디 찾기', 0),
+                ),
+                GestureDetector(
+                  onTap: () => _handleTabChange(1),
+                  child: _buildTabButton('비밀번호 변경', 1),
+                ),
               ],
             ),
             const SizedBox(height: 30),
@@ -149,31 +207,23 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   }
 
   Widget _buildTabButton(String text, int index) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _selectedTabIndex = index;
-          _isEmailSelected = true;
-        });
-      },
-      child: Column(
-        children: [
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 16,
-              color: _selectedTabIndex == index ? Colors.black : Colors.grey,
-            ),
+    return Column(
+      children: [
+        Text(
+          text,
+          style: TextStyle(
+            fontSize: 16,
+            color: _selectedTabIndex == index ? Colors.black : Colors.grey,
           ),
-          if (_selectedTabIndex == index)
-            Container(
-              height: 2,
-              width: 100,
-              color: Colors.black,
-              margin: EdgeInsets.only(top: 4),
-            ),
-        ],
-      ),
+        ),
+        if (_selectedTabIndex == index)
+          Container(
+            height: 2,
+            width: 100,
+            color: Colors.black,
+            margin: EdgeInsets.only(top: 4),
+          ),
+      ],
     );
   }
 
@@ -224,16 +274,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 ],
               ),
               const SizedBox(height: 20),
-              buildTextField(_usernameController, '아이디를 입력하세요'),
-              const SizedBox(height: 10),
               buildTextField(_nameController, '이름을 입력하세요'),
+              const SizedBox(height: 10),
+              buildTextField(_idController, '아이디를 입력하세요'),
               const SizedBox(height: 10),
               buildTextField(_emailOrPhoneController,
                   _isEmailSelected ? '이메일을 입력하세요' : '휴대폰 번호를 입력하세요'),
-              const SizedBox(height: 10),
-              buildTextField(_newPasswordController, '새 비밀번호를 입력하세요'),
               const SizedBox(height: 20),
-              _buildSubmitButton('비밀번호 찾기'),
+              _buildSubmitButton('비밀번호 변경'),
             ],
           ),
         );
@@ -246,6 +294,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       onTap: () {
         setState(() {
           _isEmailSelected = isEmailOption;
+          _nameController.clear();
+          _idController.clear();
+          _emailOrPhoneController.clear();
         });
       },
       child: Container(
@@ -281,6 +332,161 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
           style: TextStyle(color: Colors.white),
         ),
       ),
+    );
+  }
+
+  void _showVerificationSuccessDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            '인증 완료',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          content: const Text(
+            '사용자 인증이 완료되었습니다. 비밀번호를 재설정하세요.',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.black54,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+                _showPasswordChangeDialog(); // 비밀번호 변경 다이얼로그 호출
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                backgroundColor: Colors.black,
+              ),
+              child: const Text(
+                '확인',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPasswordChangeDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(15),
+          ),
+          title: const Text(
+            '비밀번호 변경',
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _newPasswordController,
+                decoration: InputDecoration(
+                  labelText: '새 비밀번호',
+                  labelStyle: TextStyle(color: Colors.black54),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                obscureText: true,
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _confirmPasswordController,
+                decoration: InputDecoration(
+                  labelText: '비밀번호 확인',
+                  labelStyle: const TextStyle(color: Colors.black54),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                obscureText: true,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                if (_newPasswordController.text ==
+                    _confirmPasswordController.text) {
+                  _controller.updatePassword(
+                    context,
+                    _idController.text.trim(),
+                    _newPasswordController.text.trim(),
+                  );
+                  Navigator.of(context).pop(); // 다이얼로그 닫기
+                } else {
+                  showWarningDialog(context, '비밀번호가 일치하지 않습니다.', '입력 오류');
+                }
+              },
+              style: TextButton.styleFrom(
+                padding:
+                    const EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                backgroundColor: Colors.black,
+              ),
+              child: const Text(
+                '변경',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  _isVerified = false;
+                });
+                Navigator.of(context).pop(); // 다이얼로그 닫기
+              },
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.symmetric(vertical: 10, horizontal: 20),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                backgroundColor: Colors.grey[300],
+              ),
+              child: const Text(
+                '취소',
+                style: TextStyle(
+                  color: Colors.black,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

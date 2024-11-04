@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:app/controller/user_controller.dart';
+import 'package:get/get.dart';
 
 class AccountLeavePage extends StatefulWidget {
   const AccountLeavePage({super.key});
@@ -14,6 +16,8 @@ class _AccountLeavePageState extends State<AccountLeavePage>
   late Animation<Offset> _imageAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _buttonAnimation;
+
+  final UserController userController = Get.put(UserController());
 
   @override
   void initState() {
@@ -57,9 +61,8 @@ class _AccountLeavePageState extends State<AccountLeavePage>
     super.dispose();
   }
 
-  void _confirm() {
-    // 확인 버튼 클릭 시 동작
-    print("확인 버튼이 클릭되었습니다.");
+  void _confirm() async {
+    await userController.deleteAccount();
   }
 
   @override

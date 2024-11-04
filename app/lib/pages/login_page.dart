@@ -58,6 +58,7 @@ class _LoginState extends State<Login> {
         userController.setUsername(_usernameController.text);
         userController.setLoggedIn(true);
         userController.setEmail(data['email']);
+        userController.setPhone(data['phone']);
         logController.setCurrentUserId(_usernameController.text);
         logController.fetchLogs(_usernameController.text);
         logController.connectSocket();
@@ -217,7 +218,7 @@ class _LoginState extends State<Login> {
                           ),
                         );
                       },
-                      child: Text(
+                      child: const Text(
                         'Register now',
                         style: TextStyle(
                           color: Colors.blue,
