@@ -15,7 +15,7 @@ if physical_devices:
 classes = ['넘어짐', '정상']
 
 # 넘파이 파일 로드
-data = np.load('keypoints_data_11633.npz')
+data = np.load('keypoints_data_1.npz')
 
 train_data = data['train_data']
 train_labels = data['train_labels']
