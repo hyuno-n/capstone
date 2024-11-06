@@ -139,7 +139,7 @@ class _AccountLeavePageState extends State<AccountLeavePage>
                 style: ElevatedButton.styleFrom(
                   foregroundColor: const Color.fromARGB(255, 143, 143, 143),
                   backgroundColor:
-                      const Color.fromARGB(255, 8, 71, 122), // 버튼 배경 색상
+                      const Color.fromARGB(255, 3, 38, 66), // 버튼 배경 색상
                   padding: const EdgeInsets.symmetric(
                       horizontal: 25, vertical: 9), // 버튼 크기 조절
                   shape: RoundedRectangleBorder(
