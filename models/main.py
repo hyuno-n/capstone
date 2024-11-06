@@ -35,8 +35,8 @@ fps = 30
 buffer_length, post_event_length = 10 * fps, 10 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
-lstm_model = load_model('model/final_lstm_model.h5')
-yolo_model = YOLO("model/yolo11s-pose.pt")
+lstm_model = load_model('model/lstm_model_11633.h5')
+yolo_model = YOLO("model/yolo11n-pose.pt")
 fire_detect_model = YOLO("model/yolo11n-fire.pt")
 classes = ['Fall', 'Normal']
 default_class = 'Normal'
@@ -69,7 +69,6 @@ class EventDetector:
 
         self.fall_detection_count = {}  # 각 객체의 낙상 감지 횟수를 저장할 딕셔너리
         self.event_detected = False
-        self.frames_after_event = 0
         self.pre_event_buffer = deque(maxlen=buffer_length)
         self.out = None
         self.frames_written = 0
@@ -137,17 +136,16 @@ class EventDetector:
         if not self.event_detected or (self.frames_after_event > (self.post_event_length * 2)):
             if predicted_label in ['Fall', 'Movement', 'Smoke', 'Fire']:
                 self.event_detected = True
-                self.frames_after_event = 0
+                self.frames_written = 0
                 print(f"{predicted_label} detected!")
                 self.send_alert(user_id, camera_number, predicted_label, timestamp)
-
         if self.event_detected:
             self.save_event_clip(predicted_label, frame, timestamp)
 
-            if self.frames_after_event >= self.post_event_length:
+            if self.frames_written >= self.post_event_length:
                 self.event_detected = False
 
-        self.frames_after_event += 1  # Increment frames after event
+        self.frames_written += 1  # Increment frames after event
 
     def save_event_clip(self, event_name, frame, timestamp):
         """이벤트가 발생하면 영상을 저장하는 함수"""
@@ -155,19 +153,11 @@ class EventDetector:
             clip_filename = f"{event_name}_{timestamp}.mp4"
             self.local_filepath = os.path.join(self.output_dir, clip_filename)
             self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
-            try:
-                self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
-                print(f"비디오 라이터 초기화 완료: {clip_filename}")
-            except Exception as e:
-                print(f"비디오 라이터 초기화 중 오류 발생: {e}")
-                return
-            buffer_size = len(self.pre_event_buffer)
-            if buffer_size > 0:
-                print(f"이벤트 발생 전 {buffer_size}개의 프레임을 저장합니다.")
-                for buffered_frame in self.pre_event_buffer:
-                    self.out.write(buffered_frame)
-            else:
-                print("이벤트 발생 전 저장할 프레임이 충분하지 않습니다.")
+            self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
+
+            # 이전 프레임 저장
+            for buffered_frame in self.pre_event_buffer:
+                self.out.write(buffered_frame)
 
         try:
             self.out.write(frame)
@@ -187,11 +177,13 @@ class EventDetector:
                 future.result()  # 업로드 완료를 대기
             except Exception as e:
                 print(f"S3 업로드 중 오류 발생: {e}")
-
-            # 로컬 파일 삭제
-            if os.path.exists(self.local_filepath):
-                os.remove(self.local_filepath)
-                print(f"로컬 파일 삭제: {self.local_filepath}")
+            finally:
+                self.event_detected = False  # 상태 초기화
+                self.frames_written = 0
+                self.executor.shutdown(wait=True)  # 종료 처리
+                if os.path.exists(self.local_filepath):
+                    os.remove(self.local_filepath)
+                    print(f"로컬 파일 삭제: {self.local_filepath}")
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
@@ -224,8 +216,8 @@ def detect_people_and_keypoints(frame):
     
     return keypoints_list, boxes, track_ids
 
-def detect_movement(frame, min_contour_area=10000):
-    """영상처리를 이용한 움직임 감지"""
+def detect_movement(frame, roi_coords, min_contour_area=10000):
+    """영상처리를 이용한 움직임 감지 (ROI 안에 있을 때만 표시)"""
     fg_mask = bg_subtractor.apply(frame)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, None, iterations=2)
@@ -242,11 +234,15 @@ def detect_movement(frame, min_contour_area=10000):
             largest_area = area
             largest_contour = contour
 
-    # 가장 큰 컨투어가 있을 경우 박스를 그리기
+    # 가장 큰 컨투어가 있을 경우, ROI 범위 내에 있는지 확인 후 네모 상자 표시
     if largest_contour is not None:
         x, y, w, h = cv2.boundingRect(largest_contour)
-        cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        motion_detected = True
+
+        # ROI 좌표 범위 확인
+        roi_x1, roi_y1, roi_x2, roi_y2 = roi_coords
+        if x >= roi_x1 and y >= roi_y1 and (x + w) <= roi_x2 and (y + h) <= roi_y2:
+            cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            motion_detected = True
 
     return frame, motion_detected
 
@@ -302,7 +298,7 @@ def process_video(user_id, camera_id, rtsp_url):
         roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
         roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
         roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
-        
+        roi_coords = (roi_x1, roi_y1, roi_x2, roi_y2)
         frame = cv2.resize(frame, (output_width, output_height), interpolation=cv2.INTER_CUBIC)
 
         if roi_apply_signal:
@@ -324,7 +320,7 @@ def process_video(user_id, camera_id, rtsp_url):
                 preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
 
                 # LSTM 모델을 사용하여 예측
-                predictions = lstm_model.predict(preprocessed_keypoints)
+                predictions = lstm_model.predict(preprocessed_keypoints, verbose = False)
 
                 predicted_class = np.argmax(predictions, axis=1)[0]
                 predicted_label = classes[predicted_class]
@@ -343,7 +339,7 @@ def process_video(user_id, camera_id, rtsp_url):
                     if track_id in event_detector.fall_detection_count:
                         event_detector.fall_detection_count[track_id] = 0  # 또는 감소 로직을 원하면 조정 가능
 
-                 # 낙상이 5회 이상 감지된 경우
+                # 낙상이 5회 이상 감지된 경우
                 if event_detector.fall_detection_count.get(track_id, 0) >= 5:
                     object_predictions[track_id] = 'Fall'
                     print(f"Track ID {track_id} - Fall detected!")
@@ -380,13 +376,13 @@ def process_video(user_id, camera_id, rtsp_url):
                     
         # 움직임 감지
         if camera_settings['movement_detection_on']:
-            frame, motion_detected = detect_movement(frame)
+            frame, motion_detected = detect_movement(frame, roi_coords)
             if motion_detected:
                 event_detector.handle_event_detection(frame, 'Movement', user_id, camera_id)
 
         # 화재 감지
         if camera_settings['fire_detection_on']:
-            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True))
+            fire_predictions = fire_detect_model.predict(source=frame, stream=True, verbose = False)
             fire_detected_in_roi = False
             for prediction in fire_predictions:
                 for box in prediction.boxes:
