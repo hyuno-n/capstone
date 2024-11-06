@@ -130,8 +130,12 @@ class EventDetector:
     def handle_event_detection(self, frame, predicted_label, user_id, camera_number):
         """이벤트 발생 감지 후 처리"""
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        if predicted_label in ['Black_smoke', 'Gray_smoke', 'White_smoke']:
+            predicted_label = 'Smoke'
+
         if not self.event_detected or (self.frames_after_event > (self.post_event_length * 2)):
-            if predicted_label in ['Fall', 'Movement', 'Black_smoke', 'Gray_smoke', 'White_smoke', 'Fire']:
+            if predicted_label in ['Fall', 'Movement', 'Smoke', 'Fire']:
                 self.event_detected = True
                 self.frames_after_event = 0
                 print(f"{predicted_label} detected!")
@@ -385,18 +389,37 @@ def process_video(user_id, camera_id, rtsp_url):
             fire_predictions = list(fire_detect_model.predict(source=frame, stream=True))
             fire_detected_in_roi = False
             for prediction in fire_predictions:
-                for box in prediction:
+                for box in prediction.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    class_name = fire_detect_model.names[int(box.cls[0])]
                     if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
                         fire_detected_in_roi = True
                         break
 
-            if fire_detected_in_roi:
+            if class_name == 'Fire' and fire_detected_in_roi:
                 label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                event_detector.handle_event_detection(frame, 'Fire detected', user_id, camera_id)
+                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+        
+        # 화재 감지
+        if camera_settings['smoke_detection_on']:
+            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True))
+            fire_detected_in_roi = False
+            for prediction in fire_predictions:
+                for box in prediction.boxes:
+                    x1, y1, x2, y2 = map(int, box.xyxy[0])
+                    class_name = fire_detect_model.names[int(box.cls[0])]
+                    if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                        fire_detected_in_roi = True
+                        break
 
+            if class_name != 'Fire' and fire_detected_in_roi:
+                label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
+                cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+        
         # 프레임을 계속해서 버퍼에 저장
         event_detector.pre_event_buffer.append(frame)
 
@@ -433,6 +456,7 @@ def add_camera():
         'rtsp_url': rtsp_url,
         'fall_detection_on': camera_settings.get('fall_detection_on', False),
         'fire_detection_on': camera_settings.get('fire_detection_on', False),
+        'smoke_detection_on': camera_settings.get('smoke_detection_on', False),
         'movement_detection_on': camera_settings.get('movement_detection_on', False),
         'roi_detection_on': camera_settings.get('roi_detection_on', False),
         'roi_values': camera_settings.get('roi_values', {})
@@ -482,6 +506,7 @@ def event_update():
             'rtsp_url': camera_data.get('rtsp_url'),
             'fall_detection_on': camera_data.get('fall_detection_on', False),
             'fire_detection_on': camera_data.get('fire_detection_on', False),
+            'smoke_detection_on': camera_data.get('smoke_detection_on', False),
             'movement_detection_on': camera_data.get('movement_detection_on', False),
             'roi_detection_on': camera_data.get('roi_detection_on', False),
             'roi_values': camera_data.get('roi_values', {})
@@ -501,6 +526,7 @@ def event_update():
         print(f"RTSP URL: {detection_status[user_id]['camera_info'][camera_id]['rtsp_url']}")
         print(f"Fall detection: {detection_status[user_id]['camera_info'][camera_id]['fall_detection_on']}")
         print(f"Fire detection: {detection_status[user_id]['camera_info'][camera_id]['fire_detection_on']}")
+        print(f"Smoke detection: {detection_status[user_id]['camera_info'][camera_id]['smoke_detection_on']}")
         print(f"Movement detection: {detection_status[user_id]['camera_info'][camera_id]['movement_detection_on']}")
         print(f"ROI Detection: {detection_status[user_id]['camera_info'][camera_id]['roi_detection_on']}")
         print(f"ROI Values: {detection_status[user_id]['camera_info'][camera_id]['roi_values']}")
