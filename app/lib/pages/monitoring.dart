@@ -23,17 +23,17 @@ class _MonitoringState extends State<Monitoring> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56.0),
         child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 0.5,
-                blurRadius: 7,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+          //decoration: BoxDecoration(
+          //  color: Colors.white,
+          //  boxShadow: [
+          //    BoxShadow(
+          //      color: Colors.grey.withOpacity(0.3),
+          //      spreadRadius: 0.5,
+          //      blurRadius: 7,
+          //      offset: const Offset(0, 2),
+          //    ),
+          //  ],
+          //),
           child: AppBar(
             elevation: 0,
             backgroundColor: Colors.transparent,
@@ -51,7 +51,7 @@ class _MonitoringState extends State<Monitoring> {
                   alignment: Alignment.topRight,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications),
+                      icon: const Icon(Icons.notifications_none_outlined),
                       iconSize: 32,
                       onPressed: () {
                         logController
