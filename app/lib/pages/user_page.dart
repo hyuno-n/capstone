@@ -1,6 +1,5 @@
 import 'package:app/controller/log_controller.dart';
 import 'package:app/pages/bug_report_page.dart';
-import 'package:app/pages/notification_page.dart';
 import 'package:app/pages/user_setting_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -21,89 +20,6 @@ class User_page extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(56.0),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            //boxShadow: [
-            //  BoxShadow(
-            //    color: Colors.grey.withOpacity(0.3),
-            //    spreadRadius: 0.8,
-            //    blurRadius: 5,
-            //    offset: const Offset(0, 2),
-            //  ),
-            //],
-          ),
-          child: AppBar(
-            elevation: 0, // AppBar의 기본 그림자 제거
-            backgroundColor: Colors.transparent, // 투명하게 설정
-            title: Row(
-              children: [
-                Image.asset(
-                  'assets/images/MVCCTV_main.png',
-                  height: 180, // 이미지 높이 조정
-                ),
-                //const SizedBox(width: 3), // 이미지와 텍스트 사이에 간격 추가
-                //const Text(
-                //  "MVCCTV",
-                //  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                //),
-              ],
-            ),
-            actions: [
-              SizedBox(
-                child: Stack(
-                  alignment: Alignment.topRight,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none_outlined),
-                      iconSize: 32,
-                      onPressed: () {
-                        logController
-                            .resetNotificationCount(); // 알림 페이지로 가기 전에 알림 수 리셋
-                        Navigator.of(context).push(
-                          CupertinoPageRoute(
-                            builder: (context) => const NotificationPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    Obx(() {
-                      return logController.newNotificationCount.value > 0
-                          ? Positioned(
-                              right: 12,
-                              top: 12,
-                              child: Container(
-                                width: 9,
-                                height: 9,
-                                decoration: const BoxDecoration(
-                                  color: Color.fromARGB(255, 255, 61, 61),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            )
-                          : Container(); // 알림이 없으면 빈 컨테이너 반환
-                    }),
-                  ],
-                ),
-              ),
-              const SizedBox(
-                width: 5,
-              )
-            ],
-            // centerTitle: true,
-            // leading: Builder(
-            //   builder: (context) => IconButton(
-            //     icon: SvgPicture.asset("assets/svg/icons/menu_upbar.svg"),
-            //     onPressed: () {
-            //       Scaffold.of(context).openEndDrawer();
-            //     },
-            //   ),
-            // ),
-          ),
-        ),
-      ),
       // endDrawer: const DrawerWidget(),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.start,
@@ -113,9 +29,9 @@ class User_page extends StatelessWidget {
           Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              color: Color.fromARGB(255, 66, 66, 66),
+              color: const Color.fromARGB(255, 66, 66, 66),
             ),
-            padding: EdgeInsets.all(18),
+            padding: const EdgeInsets.all(18),
             child: const Icon(
               Icons.person,
               color: Colors.white,
@@ -244,7 +160,7 @@ class User_page extends StatelessWidget {
                           ),
                           Text(
                             '${logController.videocount}',
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
                               color: Colors.black,
