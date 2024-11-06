@@ -22,16 +22,8 @@ class App extends GetView<AppController> {
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(56.0),
         child: Container(
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.white,
-            //boxShadow: [
-            //  BoxShadow(
-            //    color: Colors.grey.withOpacity(0.3),
-            //    spreadRadius: 1,
-            //    blurRadius: 5,
-            //    offset: const Offset(0, 2),
-            //  ),
-            //],
           ),
           child: AppBar(
             elevation: 0,
@@ -40,7 +32,7 @@ class App extends GetView<AppController> {
               children: [
                 Image.asset(
                   'assets/images/MVCCTV_main.png',
-                  height: 180, // 이미지 높이 조정
+                  height: 180,
                 ),
               ],
             ),
@@ -53,8 +45,7 @@ class App extends GetView<AppController> {
                       icon: const Icon(Icons.notifications_none_outlined),
                       iconSize: 32,
                       onPressed: () {
-                        logController
-                            .resetNotificationCount(); // 알림 페이지로 가기 전에 알림 수 리셋
+                        logController.resetNotificationCount();
                         Navigator.of(context).push(
                           CupertinoPageRoute(
                             builder: (context) => const NotificationPage(),
@@ -76,30 +67,28 @@ class App extends GetView<AppController> {
                                 ),
                               ),
                             )
-                          : Container(); // 알림이 없으면 빈 컨테이너 반환
+                          : Container();
                     }),
                   ],
                 ),
               ),
-              const SizedBox(width: 5)
+              const SizedBox(width: 5),
             ],
           ),
         ),
       ),
-      body: Obx(() {
-        return PageView(
-          controller: pageController,
-          onPageChanged: (index) {
-            controller.currentIndex.value = index;
-          },
-          children: const [
-            Monitoring(),
-            AiReportPage(),
-            LogPage(),
-            User_page(),
-          ],
-        );
-      }),
+      body: PageView(
+        controller: pageController,
+        onPageChanged: (index) {
+          controller.currentIndex.value = index; // currentIndex 업데이트
+        },
+        children: const [
+          Monitoring(),
+          AiReportPage(),
+          LogPage(),
+          User_page(),
+        ],
+      ),
       bottomNavigationBar: Obx(
         () => Container(
           decoration: const BoxDecoration(
@@ -108,15 +97,15 @@ class App extends GetView<AppController> {
           padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
           child: GNav(
             backgroundColor: Colors.white,
-            color: Colors.black.withOpacity(0.6), // 비활성화된 아이템 색상
-            activeColor: Colors.black, // 활성화된 아이템 색상
-            tabBackgroundColor: Colors.grey[200]!, // 활성화된 탭 배경색
-            gap: 8, // 아이콘과 텍스트 사이의 간격
+            color: Colors.black.withOpacity(0.6),
+            activeColor: Colors.black,
+            tabBackgroundColor: Colors.grey[200]!,
+            gap: 8,
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-            selectedIndex: controller.currentIndex.value,
+            selectedIndex: controller.currentIndex.value, // 선택된 인덱스 동기화
             onTabChange: (index) {
-              controller.changePageIndex(index); // 선택된 인덱스 업데이트
-              pageController.jumpToPage(index); // PageView 페이지 전환
+              controller.changePageIndex(index); // currentIndex 업데이트
+              pageController.jumpToPage(index); // PageView 전환
             },
             tabs: const [
               GButton(
