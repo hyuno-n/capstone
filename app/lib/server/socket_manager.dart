@@ -4,7 +4,6 @@ import 'package:intl/intl.dart';
 import '../components/notification_manager.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/provider/camera_provider.dart';
-import 'package:provider/provider.dart';
 
 /// `SocketManager` 클래스는 서버와의 소켓 연결을 관리하고,
 /// 실시간 이벤트 메시지를 수신하여 알림 및 로그 처리에 사용됩니다.
@@ -75,8 +74,8 @@ class SocketManager {
 
         // cameraNumber가 있을 경우 cameraIndex를 CameraProvider에서 가져옴
         if (cameraNumber != null) {
-          int cameraIndex = cameraProvider.getCameraIndex(cameraNumber);
-          cameraIndexMessage = " (Index: $cameraIndex)";
+          int cameraIndex = cameraProvider.getCameraIndex(cameraNumber) + 1;
+          cameraIndexMessage = " $cameraIndex";
         }
 
         // 알림 제목 및 메시지 생성

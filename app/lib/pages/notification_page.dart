@@ -130,7 +130,7 @@ class _NotificationPageState extends State<NotificationPage>
               const SizedBox(height: 20),
 
               // 로그 알림 리스트 표시
-              ...logController.logs.map((log) {
+              ...logController.logs.reversed.map((log) {
                 DateTime timestamp = DateTime.parse(log['timestamp']!);
                 String formattedDate =
                     DateFormat('MM월 dd일 HH시').format(timestamp);
