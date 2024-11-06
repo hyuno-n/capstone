@@ -66,7 +66,7 @@ class AdPage_2 extends StatelessWidget {
                       height: 9,
                     ),
                     Text(
-                      "감지가 발견되면 즉각적인 알림과 영상클립이 저장됩니다.",
+                      "위험이 감지되면 즉각적인 알림과 영상클립이 저장됩니다.",
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 11,
