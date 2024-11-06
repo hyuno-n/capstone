@@ -51,7 +51,7 @@ class _MonitoringState extends State<Monitoring> {
                   alignment: Alignment.topRight,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications),
+                      icon: const Icon(Icons.notifications_none_outlined),
                       iconSize: 32,
                       onPressed: () {
                         logController

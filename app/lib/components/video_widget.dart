@@ -29,7 +29,7 @@ class _VideoWidgetState extends State<VideoWidget> {
       context: context,
       builder: (BuildContext context) {
         return CupertinoAlertDialog(
-          title: const Text("Add Camera"),
+          title: const Text("카메라 추가"),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -42,13 +42,13 @@ class _VideoWidgetState extends State<VideoWidget> {
           ),
           actions: <Widget>[
             CupertinoDialogAction(
-              child: const Text("취소"),
+              child: const Text("돌아가기"),
               onPressed: () {
                 Navigator.pop(context);
               },
             ),
             CupertinoDialogAction(
-              child: const Text("적용"),
+              child: const Text("추가"),
               onPressed: () {
                 if (_textEditingController.text.isNotEmpty) {
                   // 현재 로그인한 user_id 가져오기

@@ -116,7 +116,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
                   alignment: Alignment.topRight,
                   children: [
                     IconButton(
-                      icon: const Icon(Icons.notifications),
+                      icon: const Icon(Icons.notifications_none_outlined),
                       iconSize: 32,
                       onPressed: () {
                         _logController
