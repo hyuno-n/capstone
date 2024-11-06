@@ -136,6 +136,8 @@ flutter:
     - assets/images/shield_icon.png
     - assets/images/lock_icon.png
     - assets/images/check_icon.png
+    - assets/images/ad_page_1.jpg
+    - assets/images/ad_page_2.jpg
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

@@ -137,7 +137,10 @@ class _StreamingState extends State<Streaming> {
           Container(
             height: 50,
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.5),
+              color: const Color.fromARGB(255, 37, 37, 37),
+              borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(12),
+                  bottomRight: Radius.circular(12)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.grey.withOpacity(0.2),
@@ -153,19 +156,24 @@ class _StreamingState extends State<Streaming> {
                   padding: const EdgeInsets.only(left: 12.0),
                   child: Text(
                     widget.cameraName,
-                    style: const TextStyle(color: Colors.black),
+                    style: const TextStyle(color: Colors.white),
                   ),
                 ),
                 const Spacer(),
                 IconButton(
-                  icon: SvgPicture.asset("assets/svg/icons/audio_on.svg"),
+                  icon: SvgPicture.asset(
+                    "assets/svg/icons/audio_on.svg",
+                    color: Colors.white,
+                  ),
                   onPressed: () {
                     _toggleVolumeSlider(); // 볼륨 슬라이더 표시 토글
                   },
                 ),
                 IconButton(
                   icon: SvgPicture.asset(
-                      "assets/svg/icons/delete_icon.svg"), // 삭제 아이콘 추가
+                    "assets/svg/icons/delete_icon.svg",
+                    color: Colors.white,
+                  ), // 삭제 아이콘 추가
                   onPressed: () {
                     _showDeleteConfirmationDialog(context); // 삭제 확인 다이얼로그 호출
                   },
@@ -173,6 +181,7 @@ class _StreamingState extends State<Streaming> {
                 IconButton(
                   icon: SvgPicture.asset(
                     "assets/svg/icons/fullscreen.svg",
+                    color: Colors.white,
                     height: 20,
                   ),
                   onPressed: () {
