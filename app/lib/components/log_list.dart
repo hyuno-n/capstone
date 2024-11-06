@@ -68,7 +68,7 @@ class LogList extends StatelessWidget {
                 String eventIcon;
                 switch (videoclips['eventname']) {
                   case 'Movement':
-                    eventIcon = 'assets/images/suspect_icon_2.gif';
+                    eventIcon = 'assets/images/suspect_icon.gif';
                     break;
                   case 'Fire':
                     eventIcon = 'assets/images/fire_log_icon.gif';
