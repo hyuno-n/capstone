@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../components/notification_manager.dart';
 import '../server/socket_manager.dart';
+import 'package:app/provider/camera_provider.dart';
 
 class LogController extends GetxController {
   late NotificationManager notificationManager;
@@ -20,6 +21,10 @@ class LogController extends GetxController {
   Timer? _retryTimer;
   RxInt newNotificationCount = 0.obs; // 새로운 알림 수 추가
 
+  final CameraProvider cameraProvider;
+
+  LogController(this.cameraProvider);
+
   @override
   void onInit() {
     super.onInit();
@@ -27,7 +32,7 @@ class LogController extends GetxController {
   }
 
   void connectSocket() {
-    socketManager = SocketManager(notificationManager, this);
+    socketManager = SocketManager(notificationManager, this, cameraProvider);
     socketManager.connectToSocket(currentUserId);
   }
 
@@ -85,10 +90,10 @@ class LogController extends GetxController {
         detectionCount = logs.length;
         isLoading.value = false;
       } else {
-        _handleFetchError();
+        _handleFetchError(() => fetchLogs(currentUserId));
       }
     } catch (e) {
-      _handleFetchError();
+      _handleFetchError(() => fetchLogs(currentUserId));
     }
   }
 
@@ -117,21 +122,22 @@ class LogController extends GetxController {
         videocount = videoClips.length;
         isLoading.value = false;
       } else {
-        _handleFetchError();
+        _handleFetchError(() => fetchVideoClips(currentUserId));
       }
     } catch (e) {
-      _handleFetchError();
+      _handleFetchError(() => fetchVideoClips(currentUserId));
     }
   }
 
-  void _handleFetchError() {
+  void _handleFetchError(Function fetchFunction) {
     hasError.value = true;
     isLoading.value = false;
+    _retryFetch(() => fetchFunction());
+  }
 
-    _retryTimer?.cancel();
-    _retryTimer = Timer(Duration(seconds: 5), () {
-      fetchLogs(currentUserId);
-    });
+  void _retryFetch(Future<void> Function() fetchFunction) {
+    _retryTimer?.cancel(); // 이전 타이머를 취소하고
+    _retryTimer = Timer(Duration(seconds: 5), fetchFunction); // 5초 후 다시 시도
   }
 
   Future<void> clearLogs() async {

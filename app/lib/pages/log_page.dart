@@ -5,6 +5,8 @@ import 'package:get/get.dart';
 import 'package:app/controller/log_controller.dart';
 import 'package:app/components/log_list.dart';
 import 'package:app/controller/user_controller.dart';
+import 'package:app/provider/camera_provider.dart';
+import 'package:provider/provider.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
@@ -14,15 +16,20 @@ class LogPage extends StatefulWidget {
 }
 
 class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
-  final LogController _logController = Get.put(LogController());
+  late final LogController _logController;
   final UserController _userController = Get.find<UserController>();
-  final logController = Get.find<LogController>();
   late AnimationController _controller;
   late Animation<Offset> _animation;
 
   @override
   void initState() {
     super.initState();
+
+    // CameraProvider를 가져와서 LogController 초기화
+    final cameraProvider = Provider.of<CameraProvider>(context, listen: false);
+    _logController = Get.put(LogController(cameraProvider));
+
+    // 비디오 클립 가져오기
     _logController.fetchVideoClips(_userController.username.value);
 
     // 애니메이션 컨트롤러 초기화
@@ -112,7 +119,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
                       icon: const Icon(Icons.notifications),
                       iconSize: 32,
                       onPressed: () {
-                        logController
+                        _logController
                             .resetNotificationCount(); // 알림 페이지로 가기 전에 알림 수 리셋
                         Navigator.of(context).push(
                           CupertinoPageRoute(
@@ -122,7 +129,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
                       },
                     ),
                     Obx(() {
-                      return logController.newNotificationCount.value > 0
+                      return _logController.newNotificationCount.value > 0
                           ? Positioned(
                               right: 12,
                               top: 12,
@@ -159,7 +166,7 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
                     height: 300,
                     fit: BoxFit.cover,
                   ),
-                ), // 이미지와 텍스트 간격
+                ),
                 const Text(
                   '저장된 영상 클립이 없습니다',
                   style: TextStyle(fontSize: 20, color: Colors.grey),

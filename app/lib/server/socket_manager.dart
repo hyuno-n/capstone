@@ -3,6 +3,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:intl/intl.dart';
 import '../components/notification_manager.dart';
 import 'package:app/controller/log_controller.dart';
+import 'package:app/provider/camera_provider.dart';
+import 'package:provider/provider.dart';
 
 /// `SocketManager` 클래스는 서버와의 소켓 연결을 관리하고,
 /// 실시간 이벤트 메시지를 수신하여 알림 및 로그 처리에 사용됩니다.
@@ -10,10 +12,15 @@ class SocketManager {
   late IO.Socket socket; // Socket.io 클라이언트 소켓 인스턴스
   final NotificationManager notificationManager; // 알림 관리를 위한 인스턴스
   final LogController logController; // 로그 관리를 위한 인스턴스
+  final CameraProvider cameraProvider; // CameraProvider 인스턴스 추가
   bool isConnected = false; // 소켓 연결 상태를 나타내는 플래그
 
-  // 생성자: `NotificationManager`와 `LogController` 인스턴스를 받아 설정
-  SocketManager(this.notificationManager, this.logController);
+  // 생성자: `NotificationManager`, `LogController`, `CameraProvider` 인스턴스를 받아 설정
+  SocketManager(
+    this.notificationManager,
+    this.logController,
+    this.cameraProvider,
+  );
 
   /// 서버에 소켓 연결을 설정하고 이벤트를 수신합니다.
   /// 이미 연결된 경우 재연결을 시도하지 않습니다.
@@ -63,11 +70,18 @@ class SocketManager {
 
         // 이벤트명과 카메라 번호 설정
         String eventname = data['eventname'] ?? "New Event";
-        String cameraNumber = data['camera_number']?.toString() ?? "N/A";
+        int? cameraNumber = data['camera_number'];
+        String cameraIndexMessage = '';
+
+        // cameraNumber가 있을 경우 cameraIndex를 CameraProvider에서 가져옴
+        if (cameraNumber != null) {
+          int cameraIndex = cameraProvider.getCameraIndex(cameraNumber);
+          cameraIndexMessage = " (Index: $cameraIndex)";
+        }
 
         // 알림 제목 및 메시지 생성
         String title = "MVCCTV";
-        String message = "📷camera$cameraNumber에서 $eventname이 발생하였습니다.";
+        String message = "📷camera$cameraIndexMessage에서 $eventname이 발생하였습니다.";
 
         // 알림 매니저를 통해 알림을 화면에 표시
         notificationManager.showNotification(title, message);
