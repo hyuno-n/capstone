@@ -1,3 +1,4 @@
+import 'dart:math'; // Random 클래스 사용을 위한 임포트
 import 'package:app/pages/login_page.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +20,15 @@ class _AccountLeavePageState extends State<AccountLeavePage>
   late Animation<double> _buttonAnimation;
 
   final UserController userController = Get.put(UserController());
+
+  // 랜덤 문장 선택을 위한 변수
+  final List<String> messages = [
+    '이제 못 보게 되는 건가요?',
+    '정말로 탈퇴하시는 건가요?',
+    '이제 이별인가요? 너무 아쉬워요.',
+    '정말로 떠나는 건가요?'
+  ];
+  late final String selectedMessage;
 
   @override
   void initState() {
@@ -48,6 +58,9 @@ class _AccountLeavePageState extends State<AccountLeavePage>
       curve: const Interval(1.0, 1.0, curve: Curves.easeIn), // 버튼 애니메이션
     ));
 
+    // 랜덤으로 문장 선택
+    selectedMessage = messages[Random().nextInt(messages.length)];
+
     // 애니메이션 시작
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _controller.forward();
@@ -58,10 +71,6 @@ class _AccountLeavePageState extends State<AccountLeavePage>
   void dispose() {
     _controller.dispose(); // 리소스 정리
     super.dispose();
-  }
-
-  void _confirm() async {
-    await userController.deleteAccount();
   }
 
   void _showConfirmationDialog() {
@@ -114,9 +123,12 @@ class _AccountLeavePageState extends State<AccountLeavePage>
             ),
             FadeTransition(
               opacity: _textAnimation,
-              child: const Text(
-                '이제 못보게되는건가요?',
-                style: TextStyle(fontSize: 20, color: Colors.grey),
+              child: Text(
+                selectedMessage, // 선택된 랜덤 문장 표시
+                style: const TextStyle(
+                    fontSize: 20,
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 150), // 간격 추가
