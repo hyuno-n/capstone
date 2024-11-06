@@ -26,14 +26,14 @@ class User_page extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3),
-                spreadRadius: 0.8,
-                blurRadius: 5,
-                offset: const Offset(0, 2),
-              ),
-            ],
+            //boxShadow: [
+            //  BoxShadow(
+            //    color: Colors.grey.withOpacity(0.3),
+            //    spreadRadius: 0.8,
+            //    blurRadius: 5,
+            //    offset: const Offset(0, 2),
+            //  ),
+            //],
           ),
           child: AppBar(
             elevation: 0, // AppBar의 기본 그림자 제거

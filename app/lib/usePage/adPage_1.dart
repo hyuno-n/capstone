@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:get/get_connect/http/src/utils/utils.dart';
+//import 'package:get/get_connect/http/src/utils/utils.dart';
 
 class AdPage_1 extends StatelessWidget {
   const AdPage_1({super.key});

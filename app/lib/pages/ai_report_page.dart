@@ -20,14 +20,14 @@ class AiReportPage extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white, // AppBar 배경색을 흰색으로 설정
-            boxShadow: [
-              BoxShadow(
-                color: Colors.grey.withOpacity(0.3), // 그림자 색상
-                spreadRadius: 0.1, // 그림자의 퍼짐 반경
-                blurRadius: 5, // 그림자 블러 정도
-                offset: const Offset(0, 2), // 그림자의 위치 (아래쪽)
-              ),
-            ],
+            //boxShadow: [
+            //  BoxShadow(
+            //    color: Colors.grey.withOpacity(0.3), // 그림자 색상
+            //    spreadRadius: 0.1, // 그림자의 퍼짐 반경
+            //    blurRadius: 5, // 그림자 블러 정도
+            //    offset: const Offset(0, 2), // 그림자의 위치 (아래쪽)
+            //  ),
+            //],
           ),
           child: AppBar(
             elevation: 0, // AppBar의 기본 그림자 제거
