@@ -5,6 +5,7 @@ import 'package:app/components/log_list.dart';
 import 'package:app/controller/user_controller.dart';
 import 'package:app/provider/camera_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:app/components/loading_indicator.dart';
 
 class LogPage extends StatefulWidget {
   const LogPage({super.key});
@@ -56,7 +57,9 @@ class _LogPageState extends State<LogPage> with TickerProviderStateMixin {
       backgroundColor: Colors.white, // 전체 배경을 흰색으로 설정
 
       body: Obx(() {
-        if (_logController.videoClips.isEmpty) {
+        if (_logController.isLoading.value) {
+          return Center(child: LoadingIndicator());
+        } else if (_logController.videoClips.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,

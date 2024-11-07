@@ -15,6 +15,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   int _selectedTabIndex = 0; // 0: 아이디 찾기, 1: 비밀번호 찾기
   bool _isEmailSelected = true; // 이메일 인증과 휴대폰 인증 구분
   bool _isVerified = false; // 인증 완료 여부
+  bool _isPasswordVerified = false;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _idController = TextEditingController();
@@ -51,7 +52,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
     _emailOrPhoneController.clear();
     _newPasswordController.clear();
     _confirmPasswordController.clear();
-    _isVerified = false;
     _isEmailSelected = true; // 인증 방법 초기화
   }
 
@@ -107,20 +107,19 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
       final contact = _emailOrPhoneController.text.trim();
 
       if (_selectedTabIndex == 0) {
-        if (!_isVerified) {
-          _controller
-              .findUserId(
-            context,
-            _nameController.text.trim(),
-            contact,
-          )
-              .then((_) {
-            setState(() {
-              _isVerified = true;
-            });
-          });
-        }
+        // 아이디 찾기 탭
+        _controller
+            .findUserId(
+              context,
+              _nameController.text.trim(),
+              contact,
+            )
+            .then((_) {})
+            .catchError((error) {
+          showWarningDialog(context, '오류', '아이디 찾기 중 오류가 발생했습니다.');
+        });
       } else if (_selectedTabIndex == 1) {
+        // 비밀번호 찾기 탭
         if (!_isVerified) {
           _controller
               .verifyUserForPasswordReset(
@@ -134,8 +133,12 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
                 _isVerified = true;
               });
               _showVerificationSuccessDialog(); // 인증 완료 다이얼로그 호출
+            } else {
+              showWarningDialog(context, '오류', '아이디나 인증 정보가 일치하지 않습니다.');
             }
           });
+        } else {
+          _showPasswordChangeDialog(); // 이미 인증된 경우 비밀번호 변경 다이얼로그 호출
         }
       }
     } else {
@@ -146,7 +149,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage>
   void _handleTabChange(int index) {
     setState(() {
       _selectedTabIndex = index;
-      _isVerified = false;
+      _isEmailSelected = true;
+      // 탭 변경 시 인증 상태 초기화
+      if (index == 0) {
+        _isVerified = false;
+      } else if (index == 1) {
+        _isPasswordVerified = false;
+      }
       _resetFields();
     });
   }

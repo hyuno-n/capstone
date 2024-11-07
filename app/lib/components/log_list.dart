@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:app/provider/camera_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:app/components/loading_indicator.dart'; // LoadingIndicator import
 import 'dart:ui';
 import 'package:flutter/services.dart';
 
@@ -150,7 +151,6 @@ class LogList extends StatelessWidget {
     );
   }
 
-  // 비디오 재생 팝업 함수
   void _showFullScreenVideo(BuildContext context, String url) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -297,7 +297,7 @@ class _VlcPlayerScreenState extends State<VlcPlayerScreen> {
       child: VlcPlayer(
         controller: _vlcController,
         aspectRatio: 16 / 9,
-        placeholder: Center(child: CircularProgressIndicator()),
+        placeholder: LoadingIndicator(), // LoadingIndicator 적용
       ),
     );
   }
@@ -321,7 +321,7 @@ class FullScreenVideoPlayer extends StatelessWidget {
             top: 10,
             left: 10,
             child: IconButton(
-              icon: Icon(Icons.close, color: Colors.black),
+              icon: Icon(Icons.close, color: Colors.white),
               onPressed: () async {
                 await SystemChrome.setPreferredOrientations([
                   DeviceOrientation.portraitUp,

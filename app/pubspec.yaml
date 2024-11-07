@@ -37,7 +37,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   get: ^4.6.6
   intl: ^0.19.0
-  flutter_vlc_player: ^7.4.1
+  flutter_vlc_player: ^7.0.5
   provider: ^6.1.2
   carousel_slider: ^4.2.1
   kpostal: ^0.5.1
