@@ -181,9 +181,12 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Camera ${cameraIndex + 1}',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Padding(
+          padding: const EdgeInsets.only(left: 13.0),
+          child: Text(
+            'Camera ${cameraIndex + 1}',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
         ),
         SizedBox(height: 10),
         SizedBox(
@@ -349,7 +352,7 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
                             ),
                             const Positioned(
                               left: 23,
-                              top: 23,
+                              top: 25,
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.start,
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -365,7 +368,7 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
                                   Text(
                                     "선택해주세요 :)",
                                     style: TextStyle(
-                                      fontSize: 21,
+                                      fontSize: 20,
                                       fontWeight: FontWeight.bold,
                                       color: Colors.white,
                                     ),

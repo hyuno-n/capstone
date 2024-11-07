@@ -63,7 +63,8 @@ class LogList extends StatelessWidget {
               ),
               ...dateLogs.map((videoclips) {
                 DateTime dateTime = DateTime.parse(videoclips['timestamp']!);
-                String formattedTime = DateFormat('HH:mm:ss').format(dateTime);
+                String formattedTime =
+                    DateFormat('HH시 mm분 ss초').format(dateTime);
 
                 String eventIcon;
                 switch (videoclips['eventname']) {

@@ -140,6 +140,7 @@ flutter:
     - assets/images/ad_page_2.jpg
     - assets/images/suspect_icon_2.gif
     - assets/images/ai_report_benner.jpg
+    - assets/images/range_icon_2.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
