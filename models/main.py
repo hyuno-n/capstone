@@ -36,12 +36,16 @@ fps = 15
 buffer_length, post_event_length = 10 * fps, 20 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
-lstm_model = load_model('model/lstm_model_11633.h5')
+lstm_model = load_model('model/best_model.keras')
 yolo_model = YOLO("model/yolo11n-pose.pt")
 fire_detect_model = YOLO("model/yolo11n-fire.pt")
 classes = ['Fall', 'Normal']
-default_class = 'Normal'
-default_keypoints = np.zeros((12, 2))
+
+# 파라미터 설정
+sequence_length = 20  # 시퀀스 길이
+keypoint_count = 13   # 각 프레임당 키포인트 수 (YOLOv11 Pose 모델이 출력하는 점 수)
+feature_dim = keypoint_count * 2  # x, y 좌표만 포함
+default_class = 'Noraml'
 
 # AWS S3 설정 (S3 저장소 및 폴더명)
 AWS_ACCESS_KEY_ID = os.getenv("AWS_ACCESS_KEY_ID")
@@ -70,9 +74,11 @@ class EventDetector:
         self.post_event_length = post_event_length
         self.s3_bucket_name = s3_bucket_name
         self.s3_folder_name = s3_folder_name
-        self.fall_detection_count = {}  # 각 객체의 낙상 감지 횟수를 저장할 딕셔너리
+        
+        self.keypoint_sequence = [] # 키포인트 시퀀스를 저장할 배열 초기화
         self.event_detected = False
-        self.pre_event_buffer = deque(maxlen=buffer_length)
+        self.pre_event_buffer = deque(maxlen=buffer_length) # 이벤트 감지 전 저장할 버퍼
+        self.post_event_buffer = deque(maxlen=buffer_length) # 이벤트 감지 후 저장할 버퍼
         self.out = None
         self.frames_written = 0
         self.local_filepath = None
@@ -242,10 +248,7 @@ class EventDetector:
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
-    if keypoints.shape[0] == 0:
-        return default_keypoints
-
-    body_keypoints_indices = [5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    body_keypoints_indices = [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     filtered_keypoints = keypoints[body_keypoints_indices, :2]
     return filtered_keypoints
 
@@ -332,14 +335,32 @@ def draw_skeletons_and_boxes(frame, keypoint, box):
     
     return frame
 
-def draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2):
-    """탐지할 영역(ROI)을 프레임에 그리는 함수"""
+def draw_detection_area(frame, roi_coords):
+    """
+    탐지할 영역(ROI)을 프레임에 그리는 함수
+    """
+    roi_x1, roi_y1, roi_x2, roi_y2 = roi_coords
     cv2.rectangle(frame, (roi_x1, roi_y1), (roi_x2, roi_y2), (0, 0, 255), 2)  # 빨간색 사각형 그리기
 
-def is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):
+def is_in_detection_area(x, y, roi_coords):
     """좌표가 탐지 범위(ROI) 내에 있는지 확인"""
+    roi_x1, roi_y1, roi_x2, roi_y2 = roi_coords
     return (roi_x1 <= x <= roi_x2) and (roi_y1 <= y <= roi_y2)
     
+def load_camera_settings(camera_settings):
+    """
+    카메라 설정에서 ROI 값을 불러와 적용하고, 프레임 크기를 조정합니다.
+    """
+    # ROI 적용 신호 및 좌표 불러오기
+    roi_apply_signal = camera_settings.get('roi_detection_on', False)
+    roi_x1 = camera_settings['roi_values'].get('roi_x1', 0)
+    roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
+    roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
+    roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
+    roi_coords = (roi_x1, roi_y1, roi_x2, roi_y2)
+
+    return roi_coords, roi_apply_signal
+
 def process_video(user_id, camera_id, rtsp_url):
     """비디오 프로세싱 메인 루프"""
 
@@ -357,69 +378,60 @@ def process_video(user_id, camera_id, rtsp_url):
         if not success:
             print(f"Camera {camera_id} stream ended.")
             break
-        camera_settings = detection_status[user_id]['camera_info'][camera_id]
-    
-        # 카메라 설정 로드
-        roi_apply_signal = camera_settings.get('roi_detection_on', False)
-        roi_x1 = camera_settings['roi_values'].get('roi_x1', 0)
-        roi_y1 = camera_settings['roi_values'].get('roi_y1', 0)
-        roi_x2 = camera_settings['roi_values'].get('roi_x2', 1920)
-        roi_y2 = camera_settings['roi_values'].get('roi_y2', 1080)
-        roi_coords = (roi_x1, roi_y1, roi_x2, roi_y2)
-        frame = cv2.resize(frame, (output_width, output_height), interpolation=cv2.INTER_CUBIC)
 
+        camera_settings = detection_status[user_id]['camera_info'][camera_id]
+        roi_coords, roi_apply_signal = load_camera_settings(camera_settings)
+        # 프레임 크기 조정
+        frame = cv2.resize(frame, (output_width, output_height), interpolation=cv2.INTER_CUBIC)
+    
         if roi_apply_signal:
-            draw_detection_area(frame, roi_x1, roi_y1, roi_x2, roi_y2)
+            draw_detection_area(frame, roi_coords)
 
         # 넘어짐 감지
         if camera_settings['fall_detection_on']:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
             detected_in_roi = []  # 여러 객체가 ROI 내에서 감지되었는지 확인하기 위한 리스트
             predictions = {}  # 각 객체의 예측을 저장할 딕셔너리
-            
+            keypoint_sequence = event_detector.keypoint_sequence
             for keypoints, track_id in zip(keypoints_list, track_ids):
-                predicted_label = default_class
                 # 키포인트가 기본값일 때의 처리 (예: 이벤트 감지 건너뛰기)
-                if np.all(keypoints == (0, 0)):  # 기본값일 경우
-                    continue  # 또는 적절한 다른 처리를 수행
-
-                preprocessed_keypoints = preprocess_keypoints(keypoints)
-                preprocessed_keypoints = preprocessed_keypoints.reshape(1, 12, 2)
-
-                # LSTM 모델을 사용하여 예측
-                predictions = lstm_model.predict(preprocessed_keypoints, verbose = False)
-
-                predicted_class = np.argmax(predictions, axis=1)[0]
-                predicted_label = classes[predicted_class]
-
-                # 낙상 5회 이하 감지시 Normal로 검출
-                object_predictions[track_id] = default_class
-
-                # 낙상 감지 이벤트 카운트
-                if predicted_label == 'Fall':
-                    if track_id not in event_detector.fall_detection_count:
-                        event_detector.fall_detection_count[track_id] = 0  # 카운트 초기화
-                    event_detector.fall_detection_count[track_id] += 1  # 카운트 증가
-                    
+                if keypoints_list:
+                    selected_keypoints = preprocess_keypoints(np.array(keypoints_list[0]))
+                    flattened_keypoints = selected_keypoints.flatten()  # x, y 좌표만 사용
+                    # 키포인트 시퀀스에 추가
+                    keypoint_sequence.append(flattened_keypoints)
                 else:
-                    # 낙상이 아닐 경우 카운트 초기화
-                    if track_id in event_detector.fall_detection_count:
-                        event_detector.fall_detection_count[track_id] = 0  # 또는 감소 로직을 원하면 조정 가능
-
-                # 낙상이 5회 이상 감지된 경우
-                if event_detector.fall_detection_count.get(track_id, 0) >= 5:
-                    object_predictions[track_id] = 'Fall'
-                    print(f"Track ID {track_id} - Fall detected!")
+                    # 키포인트가 감지되지 않을 경우 이전 프레임의 키포인트 사용
+                    if keypoint_sequence:
+                        keypoint_sequence.append(keypoint_sequence[-1])
+                    else:
+                        continue
                 
+               # 시퀀스 길이 초과 시, 가장 오래된 키포인트 제거
+                if len(keypoint_sequence) > sequence_length:
+                    keypoint_sequence.pop(0)
+
+                # 시퀀스가 충분히 쌓였을 때 예측
+                if len(keypoint_sequence) == sequence_length:
+                    # 모델 입력 형태에 맞게 배열 전처리
+                    input_sequence = np.array(keypoint_sequence).reshape(1, sequence_length, feature_dim)
+                    
+                    # 모델 예측
+                    predictions = lstm_model.predict(input_sequence, verbose=0)
+                    predicted_class = np.argmax(predictions, axis=1)[0]
+                    object_predictions[track_id] = "Fall" if predicted_class == 1 else "Normal"
+                else: 
+                    object_predictions[track_id] = 'Normal'
+                    
                 for (x, y) in keypoints:
-                    if is_in_detection_area(x, y, roi_x1, roi_y1, roi_x2, roi_y2):  # ROI 내에 있는지 확인
+                    if is_in_detection_area(x, y, roi_coords):  # ROI 내에 있는지 확인
                         detected_in_roi.append(track_id)  # ROI 내에서 감지된 track_id를 추가
                         break  # ROI 내에 있는 점이 있으면 감지 성공으로 처리
                     
             # ROI 내에서 감지된 객체에 대해 이벤트 감지 및 시각화
             for track_id in detected_in_roi:                
                 # 해당 객체에 대한 박스 및 키포인트 그리기
-                if track_id in track_ids:
+                if track_id in track_ids and track_id in object_predictions:
                     index = track_ids.index(track_id)
                     box = boxes[index]  # 현재 track_id에 해당하는 경계 상자를 찾음
                     x1, y1, _, _ = map(int, box)  # 좌상단 좌표 사용
@@ -434,7 +446,6 @@ def process_video(user_id, camera_id, rtsp_url):
                     # 이벤트 발생 처리 함수
                     event_detector.handle_event_detection(frame, object_predictions[track_id], user_id, camera_id)
             
-
             # 추적 경로 그리기
             for track_id, track in track_history.items():
                 if track:
@@ -458,7 +469,7 @@ def process_video(user_id, camera_id, rtsp_url):
                 for box in prediction.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     class_name = fire_detect_model.names[int(box.cls[0])]
-                    if class_name == 'Fire' and is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                    if class_name == 'Fire' and is_in_detection_area(x1, y1, roi_coords):
                         fire_detected_in_roi = True
                         break
 
@@ -479,7 +490,7 @@ def process_video(user_id, camera_id, rtsp_url):
                 for box in prediction.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     class_name = fire_detect_model.names[int(box.cls[0])]
-                    if class_name != 'Fire' and is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                    if class_name != 'Fire' and is_in_detection_area(x1, y1, roi_coords):
                         fire_detected_in_roi = True
                         break
 
