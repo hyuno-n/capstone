@@ -1,4 +1,2 @@
 backend/.env
 app/.env
-models/.env
-.env

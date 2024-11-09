@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 import os
 import datetime
+import math
 from tensorflow.keras.models import load_model
 from collections import defaultdict, deque
 from flask import Flask, request, jsonify
@@ -31,8 +32,8 @@ GREEN = (0, 255, 0)
 WHITE = (255, 255, 255)
 output_width, output_height = 1920, 1080
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-fps = 30
-buffer_length, post_event_length = 10 * fps, 10 * fps  # 10초 버퍼와 10초 후 이벤트
+fps = 15
+buffer_length, post_event_length = 10 * fps, 20 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
 lstm_model = load_model('model/lstm_model_11633.h5')
@@ -63,10 +64,12 @@ class EventDetector:
         self.output_dir = output_dir
         self.fourcc = fourcc
         self.fps = fps
+        self.should_stop_saving = False  # 클립 저장 종료 상태 플래그
+        self.last_detection_time = None  # 마지막 감지 시간
+        self.continuous_detection_count = 0  # 연속 감지 카운트
         self.post_event_length = post_event_length
         self.s3_bucket_name = s3_bucket_name
         self.s3_folder_name = s3_folder_name
-
         self.fall_detection_count = {}  # 각 객체의 낙상 감지 횟수를 저장할 딕셔너리
         self.event_detected = False
         self.pre_event_buffer = deque(maxlen=buffer_length)
@@ -74,6 +77,7 @@ class EventDetector:
         self.frames_written = 0
         self.local_filepath = None
         self.s3_key = None
+        self.lock = threading.Lock()  # 락 추가
         self.executor = ThreadPoolExecutor()
 
     def create_s3(self):
@@ -93,11 +97,39 @@ class EventDetector:
         
     def upload_to_s3(self, local_filepath, s3_bucket_name, s3_key):
         """로컬 파일을 S3에 업로드"""
+
+        file_size = os.path.getsize(local_filepath)
+        part_size = 5 * 1024 * 1024  # 각 파트 크기를 5MB로 설정
+        part_count = math.ceil(file_size / part_size)  # 파트 개수 계산
         try:
             s3_client = self.create_s3()
             if s3_client:
-                s3_client.upload_file(local_filepath, s3_bucket_name, s3_key)
-                print(f"S3에 {local_filepath} 업로드 성공: {s3_key}")
+                multipart_upload = s3_client.create_multipart_upload(Bucket=s3_bucket_name, Key=s3_key)
+                upload_id = multipart_upload['UploadId']
+                parts = []
+                with open(local_filepath, 'rb') as file:
+                    for part_number in range(1, part_count + 1):
+                        # 각 파트를 읽어들임
+                        file_part = file.read(part_size)
+                        
+                        # 각 파트를 업로드
+                        part = s3_client.upload_part(
+                            Bucket=s3_bucket_name,
+                            Key=s3_key,
+                            PartNumber=part_number,
+                            UploadId=upload_id,
+                            Body=file_part
+                        )
+                        parts.append({"PartNumber": part_number, "ETag": part['ETag']})
+                        print(f"Part {part_number} 업로드 성공")
+                s3_client.complete_multipart_upload(
+                Bucket=s3_bucket_name,
+                Key=s3_key,
+                UploadId=upload_id,
+                MultipartUpload={'Parts': parts}
+                )
+
+                print(f"{local_filepath}의 멀티파트 업로드가 완료되었습니다.")
             else:
                 print("S3 클라이언트를 생성하지 못했습니다.")
         except Exception as e:
@@ -129,61 +161,84 @@ class EventDetector:
     def handle_event_detection(self, frame, predicted_label, user_id, camera_number):
         """이벤트 발생 감지 후 처리"""
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        time_diff = datetime.timedelta(seconds=5)
+
+        # self.last_detection_time이 None이면 현재 시간으로 초기화
+        if self.last_detection_time is None:
+            self.last_detection_time = datetime.datetime.now()
 
         if predicted_label in ['Black_smoke', 'Gray_smoke', 'White_smoke']:
             predicted_label = 'Smoke'
 
-        if not self.event_detected or (self.frames_after_event > (self.post_event_length * 2)):
-            if predicted_label in ['Fall', 'Movement', 'Smoke', 'Fire']:
+        # 10프레임 연속 감지 조건
+        if predicted_label in ['Fall', 'Movement', 'Smoke', 'Fire']:
+            self.continuous_detection_count += 1  # 감지 카운트 증가
+            # 감지가 유지되는 동안 마지막 감지 시간 갱신
+            self.last_detection_time = datetime.datetime.now()
+            # 연속 10프레임 감지되면 이벤트 시작
+            if self.continuous_detection_count == 20 and not self.event_detected:
                 self.event_detected = True
-                self.frames_written = 0
+                self.should_stop_saving = False
                 print(f"{predicted_label} detected!")
                 self.send_alert(user_id, camera_number, predicted_label, timestamp)
+        else:
+            self.continuous_detection_count = 0  # 감지가 끊어지면 카운트 초기화
+
         if self.event_detected:
             self.save_event_clip(predicted_label, frame, timestamp)
+            print("이벤트 프레임 송신중")
 
-            if self.frames_written >= self.post_event_length:
-                self.event_detected = False
-
-        self.frames_written += 1  # Increment frames after event
+        # 마지막 감지로부터 경과 시간이 5초 이상이면 저장 종료
+        with self.lock:
+            if (self.last_detection_time is not None and
+                not self.should_stop_saving and
+                (datetime.datetime.now() - self.last_detection_time) > time_diff):
+                print("이벤트 감지 종료")
+                self.should_stop_saving = True
 
     def save_event_clip(self, event_name, frame, timestamp):
         """이벤트가 발생하면 영상을 저장하는 함수"""
+        # 초기 클립 파일 생성
         if self.out is None:
             clip_filename = f"{event_name}_{timestamp}.mp4"
             self.local_filepath = os.path.join(self.output_dir, clip_filename)
             self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
+            print(f"클립 파일 생성 시작: {self.local_filepath}, S3 키: {self.s3_key}")
+            
             self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
 
-            # 이전 프레임 저장
+            # 버퍼에 있는 이전 프레임 저장
             for buffered_frame in self.pre_event_buffer:
                 self.out.write(buffered_frame)
 
         try:
             self.out.write(frame)
-            self.frames_written += 1
+            print(f"프레임 쓰는중")
         except Exception as e:
             print(f"프레임 쓰기 중 오류 발생: {e}")
 
         # 이벤트 후 클립 저장이 완료되면 S3에 업로드
-        if self.frames_written >= self.post_event_length:
+        if self.should_stop_saving:
             self.out.release()
-            self.out = None
-            print("이벤트 클립 저장 완료.")
-            
-            # 클립 파일을 S3에 업로드
-            future = self.executor.submit(self.upload_to_s3, self.local_filepath, self.s3_bucket_name, self.s3_key)  # S3 업로드를 백그라운드 스레드로 수행
+            print("이벤트 클립 저장 완료 및 파일 닫기")
             try:
-                future.result()  # 업로드 완료를 대기
+                # S3 업로드를 백그라운드 스레드로 수행
+                print(f"S3에 업로드 시작: {self.local_filepath} -> {self.s3_key}")
+                future = self.executor.submit(self.upload_to_s3, self.local_filepath, self.s3_bucket_name, self.s3_key)
+                future.result()  # 업로드 완료 대기
+                print(f"S3 업로드 완료: {self.local_filepath}")
             except Exception as e:
                 print(f"S3 업로드 중 오류 발생: {e}")
             finally:
+                self.out = None
                 self.event_detected = False  # 상태 초기화
-                self.frames_written = 0
-                self.executor.shutdown(wait=True)  # 종료 처리
+                self.should_stop_saving = False
+                self.last_detection_time = None
                 if os.path.exists(self.local_filepath):
                     os.remove(self.local_filepath)
                     print(f"로컬 파일 삭제: {self.local_filepath}")
+                else:
+                    print("로컬 파일이 이미 삭제되었습니다.")
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
@@ -218,9 +273,14 @@ def detect_people_and_keypoints(frame):
 
 def detect_movement(frame, roi_coords, min_contour_area=10000):
     """영상처리를 이용한 움직임 감지 (ROI 안에 있을 때만 표시)"""
+
+    # fg_mask에 임계치 적용
     fg_mask = bg_subtractor.apply(frame)
+    _, fg_mask = cv2.threshold(fg_mask, 240, 255, cv2.THRESH_BINARY)  # 임계치 조정
+    
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_OPEN, None, iterations=2)
     fg_mask = cv2.morphologyEx(fg_mask, cv2.MORPH_CLOSE, None, iterations=2)
+
     contours, _ = cv2.findContours(fg_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     motion_detected = False
@@ -230,6 +290,13 @@ def detect_movement(frame, roi_coords, min_contour_area=10000):
     # 모든 컨투어를 순회하며 가장 큰 컨투어를 찾기
     for contour in contours:
         area = cv2.contourArea(contour)
+        x, y, w, h = cv2.boundingRect(contour)
+
+        # ROI 외부에 있는 작은 컨투어 무시
+        roi_x1, roi_y1, roi_x2, roi_y2 = roi_coords
+        if not (x >= roi_x1 and y >= roi_y1 and (x + w) <= roi_x2 and (y + h) <= roi_y2):
+            continue
+
         if area > min_contour_area and area > largest_area:
             largest_area = area
             largest_contour = contour
@@ -379,16 +446,19 @@ def process_video(user_id, camera_id, rtsp_url):
             frame, motion_detected = detect_movement(frame, roi_coords)
             if motion_detected:
                 event_detector.handle_event_detection(frame, 'Movement', user_id, camera_id)
+            else:
+                event_detector.handle_event_detection(frame, default_class, user_id, camera_id)
 
         # 화재 감지
         if camera_settings['fire_detection_on']:
-            fire_predictions = fire_detect_model.predict(source=frame, stream=True, verbose = False)
+            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True, verbose = False))
             fire_detected_in_roi = False
+            class_name = None
             for prediction in fire_predictions:
                 for box in prediction.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     class_name = fire_detect_model.names[int(box.cls[0])]
-                    if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                    if class_name == 'Fire' and is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
                         fire_detected_in_roi = True
                         break
 
@@ -397,16 +467,19 @@ def process_video(user_id, camera_id, rtsp_url):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
-        
-        # 화재 감지
+            else:
+                event_detector.handle_event_detection(frame, default_class , user_id, camera_id)
+
+        # 연기 감지
         if camera_settings['smoke_detection_on']:
-            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True))
+            fire_predictions = list(fire_detect_model.predict(source=frame, stream=True, verbose = False))
             fire_detected_in_roi = False
+            class_name = None
             for prediction in fire_predictions:
                 for box in prediction.boxes:
                     x1, y1, x2, y2 = map(int, box.xyxy[0])
                     class_name = fire_detect_model.names[int(box.cls[0])]
-                    if is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
+                    if class_name != 'Fire' and is_in_detection_area(x1, y1, roi_x1, roi_y1, roi_x2, roi_y2):
                         fire_detected_in_roi = True
                         break
 
@@ -415,7 +488,9 @@ def process_video(user_id, camera_id, rtsp_url):
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
                 event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
-        
+            else:
+                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+
         # 프레임을 계속해서 버퍼에 저장
         event_detector.pre_event_buffer.append(frame)
 
