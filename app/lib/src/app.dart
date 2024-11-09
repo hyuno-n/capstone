@@ -46,11 +46,7 @@ class App extends GetView<AppController> {
                       iconSize: 32,
                       onPressed: () {
                         logController.resetNotificationCount();
-                        Navigator.of(context).push(
-                          CupertinoPageRoute(
-                            builder: (context) => const NotificationPage(),
-                          ),
-                        );
+                        Get.to(() => const NotificationPage());
                       },
                     ),
                     Obx(() {

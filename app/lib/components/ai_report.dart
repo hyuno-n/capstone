@@ -181,9 +181,12 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          'Camera ${cameraIndex + 1}',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        Padding(
+          padding: const EdgeInsets.only(left: 13.0),
+          child: Text(
+            'Camera ${cameraIndex + 1}',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+          ),
         ),
         SizedBox(height: 10),
         SizedBox(
@@ -243,7 +246,8 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
     return Container(
       width: 140,
       decoration: BoxDecoration(
-        color: value ? Colors.grey[900] : Colors.grey[100],
+        color:
+            value ? Colors.grey[900] : const Color.fromARGB(255, 228, 224, 225),
         borderRadius: BorderRadius.circular(24),
       ),
       margin: EdgeInsets.only(right: 16),
@@ -327,24 +331,52 @@ class _AiReportState extends State<AiReport> with TickerProviderStateMixin {
 
                 return SingleChildScrollView(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 25),
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 20),
-                        const Text(
-                          '원하는 감지 설정을',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const Text(
-                          "선택해주세요",
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        Stack(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.only(top: 10.0),
+                              child: ClipRRect(
+                                borderRadius:
+                                    BorderRadius.circular(8.0), // 둥근 테두리 설정
+                                child: Image.asset(
+                                  'assets/images/ai_report_benner.jpg',
+                                  width: double.infinity,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const Positioned(
+                              left: 23,
+                              top: 25,
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '원하는 감지 항목을',
+                                    style: TextStyle(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                  Text(
+                                    "선택해주세요 :)",
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                         ...List.generate(cameraProvider.rtspUrls.length,

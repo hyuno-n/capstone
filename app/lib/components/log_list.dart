@@ -6,6 +6,7 @@ import 'package:get/get.dart';
 import 'package:app/provider/camera_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
+import 'package:app/components/loading_indicator.dart';
 import 'dart:ui';
 import 'package:flutter/services.dart';
 
@@ -63,7 +64,8 @@ class LogList extends StatelessWidget {
               ),
               ...dateLogs.map((videoclips) {
                 DateTime dateTime = DateTime.parse(videoclips['timestamp']!);
-                String formattedTime = DateFormat('HH:mm:ss').format(dateTime);
+                String formattedTime =
+                    DateFormat('HH시 mm분 ss초').format(dateTime);
 
                 String eventIcon;
                 switch (videoclips['eventname']) {
@@ -150,7 +152,6 @@ class LogList extends StatelessWidget {
     );
   }
 
-  // 비디오 재생 팝업 함수
   void _showFullScreenVideo(BuildContext context, String url) {
     Navigator.of(context).push(
       PageRouteBuilder(
@@ -167,7 +168,7 @@ class LogList extends StatelessWidget {
                 backgroundColor: Colors.transparent,
                 child: Container(
                   width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height * 0.5,
+                  height: 390,
                   decoration: BoxDecoration(
                     color: Colors.black87,
                     borderRadius: BorderRadius.circular(10),
@@ -269,6 +270,21 @@ class _VlcPlayerScreenState extends State<VlcPlayerScreen> {
       autoPlay: true,
     );
 
+    // 동영상이 초기화된 후 상태 감지
+    _vlcController.addListener(() {
+      if (_vlcController.value.isInitialized && mounted) {
+        // 첫 번째 자동 재생 후에도 state가 갱신되도록 강제로 setState 호출
+        if (_vlcController.value.position.inSeconds == 0) {
+          setState(() {});
+        }
+
+        // 영상이 15초 이후로 넘어갔을 때, position 값이 갱신되도록 강제로 setState 호출
+        if (_vlcController.value.position.inSeconds > 15) {
+          setState(() {});
+        }
+      }
+    });
+
     if (widget.fullScreen) {
       SystemChrome.setPreferredOrientations([
         DeviceOrientation.landscapeRight,
@@ -292,14 +308,95 @@ class _VlcPlayerScreenState extends State<VlcPlayerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 16 / 9,
-      child: VlcPlayer(
-        controller: _vlcController,
-        aspectRatio: 16 / 9,
-        placeholder: Center(child: CircularProgressIndicator()),
-      ),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AspectRatio(
+          aspectRatio: 16 / 9,
+          child: VlcPlayer(
+            controller: _vlcController,
+            aspectRatio: 16 / 9,
+            placeholder: LoadingIndicator(),
+          ),
+        ),
+        // Expanded 위젯을 Column 내에서 사용
+        Expanded(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: ValueListenableBuilder<VlcPlayerValue>(
+              valueListenable: _vlcController,
+              builder: (context, value, child) {
+                // 동영상의 현재 위치 (초 단위)
+                final position = value.position.inSeconds.toDouble();
+                // 동영상의 전체 길이 (초 단위)
+                final duration = value.duration.inSeconds.toDouble();
+
+                // maxDuration을 double로 변환
+                final maxDuration = duration > 0 ? duration : 1.0;
+
+                // 시간을 "HH:MM:SS" 형식으로 포맷
+                final formattedPosition = _formatDuration(value.position);
+                final formattedDuration = _formatDuration(value.duration);
+
+                // 슬라이더 값이 정상적으로 동기화되고 있는지 확인
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Slider(
+                      value: position,
+                      max: maxDuration, // max 값을 double로 설정
+                      onChanged: (newPosition) {
+                        // 동영상 위치 변경
+                        _vlcController
+                            .seekTo(Duration(seconds: newPosition.toInt()));
+                      },
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          formattedPosition,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        Text(
+                          formattedDuration,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        IconButton(
+          icon: Icon(
+            _vlcController.value.isPlaying ? Icons.pause : Icons.play_arrow,
+            color: Colors.blue,
+            size: 30,
+          ),
+          onPressed: () {
+            if (_vlcController.value.isPlaying) {
+              _vlcController.pause();
+            } else {
+              _vlcController.play();
+            }
+            setState(() {});
+          },
+        ),
+      ],
     );
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    final seconds = duration.inSeconds.remainder(60);
+    return hours > 0
+        ? '${twoDigits(hours)}:${twoDigits(minutes)}:${twoDigits(seconds)}'
+        : '${twoDigits(minutes)}:${twoDigits(seconds)}';
   }
 }
 
@@ -321,7 +418,7 @@ class FullScreenVideoPlayer extends StatelessWidget {
             top: 10,
             left: 10,
             child: IconButton(
-              icon: Icon(Icons.close, color: Colors.black),
+              icon: Icon(Icons.close, color: Colors.white),
               onPressed: () async {
                 await SystemChrome.setPreferredOrientations([
                   DeviceOrientation.portraitUp,

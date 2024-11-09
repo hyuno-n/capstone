@@ -16,10 +16,10 @@ class LogController extends GetxController {
   int videocount = 0;
   String currentUserId = '';
 
-  RxBool isLoading = false.obs;
+  RxBool isLoading = false.obs; // 로딩 상태
   RxBool hasError = false.obs;
   Timer? _retryTimer;
-  RxInt newNotificationCount = 0.obs; // 새로운 알림 수 추가
+  RxInt newNotificationCount = 0.obs; // 새로운 알림 수
 
   final CameraProvider cameraProvider;
 
@@ -60,7 +60,6 @@ class LogController extends GetxController {
       'event_url': eventUrl
     });
 
-    // 새로운 알림 수 증가
     newNotificationCount.value++;
   }
 
@@ -136,11 +135,12 @@ class LogController extends GetxController {
   }
 
   void _retryFetch(Future<void> Function() fetchFunction) {
-    _retryTimer?.cancel(); // 이전 타이머를 취소하고
-    _retryTimer = Timer(Duration(seconds: 5), fetchFunction); // 5초 후 다시 시도
+    _retryTimer?.cancel();
+    _retryTimer = Timer(Duration(seconds: 5), fetchFunction);
   }
 
   Future<void> clearLogs() async {
+    isLoading.value = true;
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
     final String url = 'http://$flaskIp:$flaskPort/delete_user_events';
@@ -161,10 +161,13 @@ class LogController extends GetxController {
       }
     } catch (e) {
       print('Error clearing logs: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 
   Future<void> deleteLog(String userId, String timestamp) async {
+    isLoading.value = true;
     final String? flaskIp = dotenv.env['FLASK_IP'];
     final String? flaskPort = dotenv.env['FLASK_PORT'];
     final String url = 'http://$flaskIp:$flaskPort/delete_log';
@@ -184,6 +187,9 @@ class LogController extends GetxController {
       }
     } catch (e) {
       print('Error deleting log: $e');
+    } finally {
+      isLoading.value = false;
+      fetchVideoClips(currentUserId);
     }
   }
 
@@ -198,7 +204,6 @@ class LogController extends GetxController {
     currentUserId = userId;
   }
 
-  // 알림 수를 리셋하는 메소드 추가
   void resetNotificationCount() {
     newNotificationCount.value = 0;
   }

@@ -3,6 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter_vlc_player/flutter_vlc_player.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:app/controller/ai_fullscreen.dart';
+import 'package:app/components/loading_indicator.dart';
 
 class Streaming extends StatefulWidget {
   final bool showVolumeSlider;
@@ -28,16 +29,28 @@ class _StreamingState extends State<Streaming> {
   late VlcPlayerController vlcViewController;
   double _volume = 100.0;
   bool _isVolumeSliderVisible = false; // 슬라이더 가시성 상태
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     vlcViewController = VlcPlayerController.network(
       widget.rtspUrl,
-      hwAcc: HwAcc.full,
-      autoPlay: true,
-      options: VlcPlayerOptions(),
+      hwAcc: HwAcc.full, // 하드웨어 가속 설정
+      autoPlay: true, // 자동 재생
+      options: VlcPlayerOptions(
+        advanced: VlcAdvancedOptions([
+          '--network-caching=3000', // 네트워크 캐싱 시간을 3000ms로 설정
+          '--clock-jitter=0',
+          '--clock-synchro=0',
+        ]),
+        http: VlcHttpOptions([
+          '--http-reconnect', // HTTP 연결 재시도 옵션
+        ]),
+      ),
     );
+
+    vlcViewController.addListener(_checkPlayingStatus);
   }
 
   @override
@@ -52,6 +65,14 @@ class _StreamingState extends State<Streaming> {
     });
     vlcViewController.setVolume(volume.toInt());
     print("현재 볼륨: ${volume.toInt()}%"); // 볼륨 값 디버그 콘솔에 출력
+  }
+
+  void _checkPlayingStatus() {
+    if (vlcViewController.value.isPlaying && _isLoading) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _showDeleteConfirmationDialog(BuildContext context) {
@@ -105,14 +126,16 @@ class _StreamingState extends State<Streaming> {
                 child: VlcPlayer(
                   controller: vlcViewController,
                   aspectRatio: 16 / 9,
-                  placeholder: const SizedBox(
-                    height: 250.0,
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  ),
+                  placeholder: LoadingIndicator(),
                 ),
               ),
+              if (_isLoading)
+                Positioned.fill(
+                  child: Container(
+                    color: Colors.black.withOpacity(0.7),
+                    child: Center(child: LoadingIndicator()),
+                  ),
+                ),
               // 슬라이더
               if (_isVolumeSliderVisible)
                 Positioned(

@@ -37,7 +37,7 @@ dependencies:
   flutter_svg: ^2.0.10+1
   get: ^4.6.6
   intl: ^0.19.0
-  flutter_vlc_player: ^7.4.1
+  flutter_vlc_player: ^7.0.5
   provider: ^6.1.2
   carousel_slider: ^4.2.1
   kpostal: ^0.5.1
@@ -138,6 +138,9 @@ flutter:
     - assets/images/check_icon.png
     - assets/images/ad_page_1.jpg
     - assets/images/ad_page_2.jpg
+    - assets/images/suspect_icon_2.gif
+    - assets/images/ai_report_benner.jpg
+    - assets/images/range_icon_2.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware
