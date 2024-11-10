@@ -28,9 +28,6 @@ thread_lock = threading.Lock()
 # 스레드 풀 생성
 executor = ThreadPoolExecutor()
 
-# GPU가 있는지 확인
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 # 비디오 감지 관련 설정
 bg_subtractor = cv2.createBackgroundSubtractorMOG2()
 GREEN = (0, 255, 0)
@@ -41,9 +38,9 @@ fps = 15
 buffer_length, post_event_length = 10 * fps, 30 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
-lstm_model = load_model('model/best_model.h5')
-yolo_model = YOLO("model/yolo11n-pose.pt").to(device)
-fire_detect_model = YOLO("model/yolo11n-fire.pt").to(device)
+lstm_model = load_model('model/model.h5')
+yolo_model = YOLO("model/yolo11n-pose.pt")
+fire_detect_model = YOLO("model/yolo11n-fire.pt")
 classes = ['Fall', 'Normal']
 
 # 파라미터 설정
@@ -262,9 +259,9 @@ class EventDetector:
             print(f"로컬 파일 삭제: {self.local_filepath}")
         else:
             print("로컬 파일이 이미 삭제되었습니다.")
+        time.sleep(5) 
         self.event_detected[event_name] = False
         self.saved_clip[event_name] = False
-        time.sleep(5) 
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
@@ -442,7 +439,7 @@ def process_video(user_id, camera_id, rtsp_url):
                             event_detector.predictions = lstm_model.predict(input_sequence, verbose=0)
                             predicted_class = np.argmax(event_detector.predictions, axis=1)[0]
                             object_predictions[track_id] = "Fall" if predicted_class == 1 else "Normal"
-                            
+
                         if track_id not in detected_in_roi:
                             detected_in_roi.append(track_id)  # ROI 내에서 감지된 track_id를 추가
                         break  # ROI 내에 있는 점이 있으면 감지 성공으로 처리

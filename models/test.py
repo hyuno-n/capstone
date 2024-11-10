@@ -17,3 +17,5 @@ if tf.test.is_gpu_available():
         print(device)
 else:
     print("GPU 사용 불가능")
+import tensorflow as tf
+print(tf.__version__)
