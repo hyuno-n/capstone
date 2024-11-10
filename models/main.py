@@ -12,6 +12,7 @@ import boto3
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
+import time
 
 # 환경 변수 로드 및 전역 상수 설정
 load_dotenv()
@@ -33,7 +34,7 @@ WHITE = (255, 255, 255)
 output_width, output_height = 1920, 1080
 fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 fps = 15
-buffer_length, post_event_length = 10 * fps, 20 * fps  # 10초 버퍼와 10초 후 이벤트
+buffer_length, post_event_length = 10 * fps, 30 * fps  # 10초 버퍼와 10초 후 이벤트
 
 # 모델 불러오기 (LSTM 모델과 YOLO 모델)
 lstm_model = load_model('model/best_model.keras')
@@ -68,23 +69,40 @@ class EventDetector:
         self.output_dir = output_dir
         self.fourcc = fourcc
         self.fps = fps
-        self.should_stop_saving = False  # 클립 저장 종료 상태 플래그
         self.last_detection_time = None  # 마지막 감지 시간
         self.continuous_detection_count = 0  # 연속 감지 카운트
         self.post_event_length = post_event_length
         self.s3_bucket_name = s3_bucket_name
         self.s3_folder_name = s3_folder_name
         
-        self.keypoint_sequence = [] # 키포인트 시퀀스를 저장할 배열 초기화
-        self.event_detected = False
+        self.keypoint_sequence = {}  # 키포인트 시퀀스를 저장할 딕셔너리로 초기화
+        self.event_detected = {
+            'Fall': False,
+            'Movement': False,
+            'Fire': False,
+            'Smoke': False
+        }
         self.pre_event_buffer = deque(maxlen=buffer_length) # 이벤트 감지 전 저장할 버퍼
-        self.post_event_buffer = deque(maxlen=buffer_length) # 이벤트 감지 후 저장할 버퍼
+        self.event_buffers = {
+            'Fall': deque(maxlen=post_event_length),
+            'Movement': deque(maxlen=post_event_length),
+            'Fire': deque(maxlen=post_event_length),
+            'Smoke': deque(maxlen=post_event_length)
+        }
         self.out = None
         self.frames_written = 0
         self.local_filepath = None
         self.s3_key = None
         self.lock = threading.Lock()  # 락 추가
         self.executor = ThreadPoolExecutor()
+        self.detected_in_roi = []  # 여러 객체가 ROI 내에서 감지되었는지 확인하기 위한 리스트
+        self.predictions = {}  # 각 객체의 예측을 저장할 딕셔너리
+        self.event_timestamps = {
+            'Fall': None,
+            'Movement': None,
+            'Fire': None,
+            'Smoke': None
+        }
 
     def create_s3(self):
         """S3 클라이언트 생성"""
@@ -164,14 +182,15 @@ class EventDetector:
         except Exception as e:
             print("오류 발생:", e)
 
-    def handle_event_detection(self, frame, predicted_label, user_id, camera_number):
+    def handle_event_detection(self, predicted_label, user_id, camera_number):
         """이벤트 발생 감지 후 처리"""
-        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        time_diff = datetime.timedelta(seconds=5)
-
-        # self.last_detection_time이 None이면 현재 시간으로 초기화
-        if self.last_detection_time is None:
-            self.last_detection_time = datetime.datetime.now()
+        if not self.event_detected[predicted_label]:
+            self.event_detected[predicted_label] = True
+            timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")  # 여기서 timestamp 생성
+            self.event_timestamps[predicted_label] = timestamp
+            self.event_buffers[predicted_label].extend(self.pre_event_buffer)
+        else:
+            timestamp = self.event_timestamps[predicted_label]  # 이미 감지된 경우 기존 timestamp 사용
 
         if predicted_label in ['Black_smoke', 'Gray_smoke', 'White_smoke']:
             predicted_label = 'Smoke'
@@ -179,76 +198,65 @@ class EventDetector:
         # 10프레임 연속 감지 조건
         if predicted_label in ['Fall', 'Movement', 'Smoke', 'Fire']:
             self.continuous_detection_count += 1  # 감지 카운트 증가
-            # 감지가 유지되는 동안 마지막 감지 시간 갱신
-            self.last_detection_time = datetime.datetime.now()
             # 연속 10프레임 감지되면 이벤트 시작
-            if self.continuous_detection_count == 20 and not self.event_detected:
-                self.event_detected = True
-                self.should_stop_saving = False
+            if self.continuous_detection_count == 10:
                 print(f"{predicted_label} detected!")
                 self.send_alert(user_id, camera_number, predicted_label, timestamp)
-        else:
-            self.continuous_detection_count = 0  # 감지가 끊어지면 카운트 초기화
 
-        if self.event_detected:
-            self.save_event_clip(predicted_label, frame, timestamp)
-            print("이벤트 프레임 송신중")
+        return timestamp
 
-        # 마지막 감지로부터 경과 시간이 5초 이상이면 저장 종료
-        with self.lock:
-            if (self.last_detection_time is not None and
-                not self.should_stop_saving and
-                (datetime.datetime.now() - self.last_detection_time) > time_diff):
-                print("이벤트 감지 종료")
-                self.should_stop_saving = True
-
-    def save_event_clip(self, event_name, frame, timestamp):
+    def save_event_clip(self, event_name, timestamp):
         """이벤트가 발생하면 영상을 저장하는 함수"""
         # 초기 클립 파일 생성
-        if self.out is None:
-            clip_filename = f"{event_name}_{timestamp}.mp4"
-            self.local_filepath = os.path.join(self.output_dir, clip_filename)
-            self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
-            print(f"클립 파일 생성 시작: {self.local_filepath}, S3 키: {self.s3_key}")
-            
-            self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
+        
+        clip_filename = f"{event_name}_{timestamp}.mp4"
+        self.local_filepath = os.path.join(self.output_dir, clip_filename)
+        self.s3_key = f"{self.s3_folder_name}/{clip_filename}"
+        print(f"클립 파일 생성 시작: {self.local_filepath}, S3 키: {self.s3_key}")
+        
+        self.out = cv2.VideoWriter(self.local_filepath, self.fourcc, self.fps, (output_width, output_height))
 
-            # 버퍼에 있는 이전 프레임 저장
-            for buffered_frame in self.pre_event_buffer:
-                self.out.write(buffered_frame)
-
-        try:
+        # event_buffers에 있는 이전 및 이후 프레임 저장
+        for frame in self.event_buffers[event_name]:
             self.out.write(frame)
-            print(f"프레임 쓰는중")
-        except Exception as e:
-            print(f"프레임 쓰기 중 오류 발생: {e}")
+
+        self.out.release()
+        print("이벤트 클립 저장 완료 및 파일 닫기")
 
         # 이벤트 후 클립 저장이 완료되면 S3에 업로드
-        if self.should_stop_saving:
-            self.out.release()
-            print("이벤트 클립 저장 완료 및 파일 닫기")
-            try:
-                # S3 업로드를 백그라운드 스레드로 수행
-                print(f"S3에 업로드 시작: {self.local_filepath} -> {self.s3_key}")
-                future = self.executor.submit(self.upload_to_s3, self.local_filepath, self.s3_bucket_name, self.s3_key)
-                future.result()  # 업로드 완료 대기
-                print(f"S3 업로드 완료: {self.local_filepath}")
-            except Exception as e:
-                print(f"S3 업로드 중 오류 발생: {e}")
-            finally:
-                self.out = None
-                self.event_detected = False  # 상태 초기화
-                self.should_stop_saving = False
-                self.last_detection_time = None
-                if os.path.exists(self.local_filepath):
-                    os.remove(self.local_filepath)
-                    print(f"로컬 파일 삭제: {self.local_filepath}")
-                else:
-                    print("로컬 파일이 이미 삭제되었습니다.")
+        try:
+            # S3 업로드를 백그라운드 스레드로 수행
+            print(f"S3에 업로드 시작: {self.local_filepath} -> {self.s3_key}")
+            future = self.executor.submit(self.upload_to_s3, self.local_filepath, self.s3_bucket_name, self.s3_key)
+            future.add_done_callback(self.upload_complete_callback)  # 업로드 완료 후 콜백 호출
+            print(f"S3 업로드 완료: {self.local_filepath}")
+        except Exception as e:
+            print(f"S3 업로드 중 오류 발생: {e}")
+        finally:
+            self.out = None
+            self.event_detected[event_name] = False  # 상태 초기화
+            self.event_buffers[event_name].clear()
+            self.continuous_detection_count = 0
+                
+
+    def upload_complete_callback(self, future):
+        """S3 업로드 완료 후 로컬 파일 삭제 및 후속 작업"""
+        # 업로드가 완료되었을 때 호출되는 콜백 함수
+        if future.exception() is not None:
+            print(f"S3 업로드 중 오류 발생: {future.exception()}")
+        else:
+            print(f"S3 업로드 완료: {self.local_filepath}")
+        time.sleep(2) 
+        # S3 업로드 완료 후 로컬 파일 삭제
+        if os.path.exists(self.local_filepath):
+            os.remove(self.local_filepath)
+            print(f"로컬 파일 삭제: {self.local_filepath}")
+        else:
+            print("로컬 파일이 이미 삭제되었습니다.")
 
 def preprocess_keypoints(keypoints):
     """키포인트 전처리"""
-    body_keypoints_indices = [3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    body_keypoints_indices = [0, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     filtered_keypoints = keypoints[body_keypoints_indices, :2]
     return filtered_keypoints
 
@@ -390,38 +398,35 @@ def process_video(user_id, camera_id, rtsp_url):
         # 넘어짐 감지
         if camera_settings['fall_detection_on']:
             keypoints_list, boxes, track_ids = detect_people_and_keypoints(frame)
-            detected_in_roi = []  # 여러 객체가 ROI 내에서 감지되었는지 확인하기 위한 리스트
-            predictions = {}  # 각 객체의 예측을 저장할 딕셔너리
-            keypoint_sequence = event_detector.keypoint_sequence
+            detected_in_roi = event_detector.detected_in_roi  # 여러 객체가 ROI 내에서 감지되었는지 확인하기 위한 리스트
+    
             for keypoints, track_id in zip(keypoints_list, track_ids):
                 # 키포인트가 기본값일 때의 처리 (예: 이벤트 감지 건너뛰기)
-                if keypoints_list:
-                    selected_keypoints = preprocess_keypoints(np.array(keypoints_list[0]))
+                if any(kp.size > 0 for kp in keypoints):
+                    selected_keypoints = preprocess_keypoints(np.array(keypoints))
                     flattened_keypoints = selected_keypoints.flatten()  # x, y 좌표만 사용
-                    # 키포인트 시퀀스에 추가
-                    keypoint_sequence.append(flattened_keypoints)
+                    # track_id가 keypoint_sequence에 없으면 빈 리스트로 초기화
+                    if track_id not in event_detector.keypoint_sequence:
+                        event_detector.keypoint_sequence[track_id] = []
+                    event_detector.keypoint_sequence[track_id].append(flattened_keypoints)
                 else:
                     # 키포인트가 감지되지 않을 경우 이전 프레임의 키포인트 사용
-                    if keypoint_sequence:
-                        keypoint_sequence.append(keypoint_sequence[-1])
-                    else:
-                        continue
+                    if event_detector.keypoint_sequence[track_id]:
+                        event_detector.keypoint_sequence[track_id].append(event_detector.keypoint_sequence[track_id][-1])
                 
-               # 시퀀스 길이 초과 시, 가장 오래된 키포인트 제거
-                if len(keypoint_sequence) > sequence_length:
-                    keypoint_sequence.pop(0)
+                # 시퀀스 길이 초과 시, 가장 오래된 키포인트 제거
+                if len(event_detector.keypoint_sequence[track_id]) > sequence_length:
+                    event_detector.keypoint_sequence[track_id].pop(0)
 
                 # 시퀀스가 충분히 쌓였을 때 예측
-                if len(keypoint_sequence) == sequence_length:
+                if len(event_detector.keypoint_sequence[track_id]) == sequence_length:
                     # 모델 입력 형태에 맞게 배열 전처리
-                    input_sequence = np.array(keypoint_sequence).reshape(1, sequence_length, feature_dim)
+                    input_sequence = np.array(event_detector.keypoint_sequence[track_id]).reshape(1, sequence_length, feature_dim)
                     
                     # 모델 예측
-                    predictions = lstm_model.predict(input_sequence, verbose=0)
-                    predicted_class = np.argmax(predictions, axis=1)[0]
+                    event_detector.predictions = lstm_model.predict(input_sequence, verbose=0)
+                    predicted_class = np.argmax(event_detector.predictions, axis=1)[0]
                     object_predictions[track_id] = "Fall" if predicted_class == 1 else "Normal"
-                else: 
-                    object_predictions[track_id] = 'Normal'
                     
                 for (x, y) in keypoints:
                     if is_in_detection_area(x, y, roi_coords):  # ROI 내에 있는지 확인
@@ -443,22 +448,38 @@ def process_video(user_id, camera_id, rtsp_url):
                     # 해당 객체의 키포인트 그리기
                     draw_skeletons_and_boxes(frame, keypoints_list[index], box)
 
-                    # 이벤트 발생 처리 함수
-                    event_detector.handle_event_detection(frame, object_predictions[track_id], user_id, camera_id)
-            
             # 추적 경로 그리기
             for track_id, track in track_history.items():
                 if track:
                     points = np.hstack(track).astype(np.int32).reshape((-1, 1, 2))
                     cv2.polylines(frame, [points], isClosed=False, color=WHITE, thickness=10)
-                    
+             
+            for track_id, event in object_predictions.items():
+                # 이벤트 발생 처리 함수
+                if event == 'Fall':
+                    timestamp = event_detector.handle_event_detection('Fall', user_id, camera_id)
+                    continue
+                else:
+                    event_detector.continuous_detection_count = 0
+
+            if event_detector.event_detected['Fall']:
+                # 프레임을 계속해서 버퍼에 저장
+                event_detector.event_buffers['Fall'].append(frame)
+                if len(event_detector.event_buffers['Fall']) == post_event_length:
+                    event_detector.save_event_clip('Fall', timestamp)
+
         # 움직임 감지
         if camera_settings['movement_detection_on']:
             frame, motion_detected = detect_movement(frame, roi_coords)
             if motion_detected:
-                event_detector.handle_event_detection(frame, 'Movement', user_id, camera_id)
+                timestamp = event_detector.handle_event_detection('Movement', user_id, camera_id)
+            if event_detector.event_detected['Movement']:
+                # 프레임을 계속해서 버퍼에 저장
+                event_detector.event_buffers['Movement'].append(frame)
+                if len(event_detector.event_buffers['Movement']) == post_event_length:
+                    event_detector.save_event_clip('Movement', timestamp)
             else:
-                event_detector.handle_event_detection(frame, default_class, user_id, camera_id)
+                event_detector.continuous_detection_count = 0
 
         # 화재 감지
         if camera_settings['fire_detection_on']:
@@ -477,9 +498,14 @@ def process_video(user_id, camera_id, rtsp_url):
                 label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+                timestamp = event_detector.handle_event_detection(class_name , user_id, camera_id)
             else:
-                event_detector.handle_event_detection(frame, default_class , user_id, camera_id)
+                event_detector.continuous_detection_count = 0
+            if event_detector.event_detected['Fire']:
+                # 프레임을 계속해서 버퍼에 저장
+                event_detector.event_buffers['Fire'].append(frame)
+                if len(event_detector.event_buffers['Fire']) == post_event_length:
+                    event_detector.save_event_clip('Fire', timestamp)
 
         # 연기 감지
         if camera_settings['smoke_detection_on']:
@@ -498,9 +524,14 @@ def process_video(user_id, camera_id, rtsp_url):
                 label = f"{fire_detect_model.names[int(box.cls[0])]}: {box.conf[0]:.2f}"
                 cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
                 cv2.putText(frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+                timestamp = event_detector.handle_event_detection(class_name , user_id, camera_id)
             else:
-                event_detector.handle_event_detection(frame, class_name , user_id, camera_id)
+                event_detector.continuous_detection_count = 0
+            if event_detector.event_detected['Smoke']:
+                # 프레임을 계속해서 버퍼에 저장
+                event_detector.event_buffers['Smoke'].append(frame)
+                if len(event_detector.event_buffers['Smoke']) == post_event_length:
+                    event_detector.save_event_clip('Smoke', timestamp)
 
         # 프레임을 계속해서 버퍼에 저장
         event_detector.pre_event_buffer.append(frame)
