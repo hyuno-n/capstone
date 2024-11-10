@@ -1,4 +1,3 @@
-import 'package:app/provider/roi_provider.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -127,16 +126,6 @@ class _RoiWidgetState extends State<RoiWidget> {
               ],
             ),
             const SizedBox(height: 20),
-            Consumer<RoiProvider>(builder: (context, roiProvider, child) {
-              return roiProvider.roiRect != null
-                  ? Column(
-                      children: [
-                        const Text('ROI 설정되지 않음',
-                            style: TextStyle(fontSize: 16))
-                      ],
-                    )
-                  : const Text('ROI 설정되지 않음', style: TextStyle(fontSize: 16));
-            }),
           ],
         ),
       ),
