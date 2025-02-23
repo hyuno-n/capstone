@@ -21,8 +21,10 @@
 - **데이터베이스**: MySQL
 - **하드웨어**: Compatible with various IP cameras and personal devices
 
+## APP
+
+### Streaming Page
 ![image](https://github.com/user-attachments/assets/2ec1ab6d-46b9-43d2-9e7c-ed45b4604fef)
+
+### Video Clip Page
 ![image](https://github.com/user-attachments/assets/35fae688-05a6-4786-bd7e-e44c99ad73a2)
-
-
-## How to install
