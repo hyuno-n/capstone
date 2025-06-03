@@ -23,8 +23,17 @@
 
 ## APP
 
-### Streaming Page
-![image](https://github.com/user-attachments/assets/2ec1ab6d-46b9-43d2-9e7c-ed45b4604fef)
-
-### Video Clip Page
-![image](https://github.com/user-attachments/assets/35fae688-05a6-4786-bd7e-e44c99ad73a2)
+<table>
+  <tr>
+    <td align="center"><b>Streaming Page</b></td>
+    <td align="center"><b>Video Clip Page</b></td>
+  </tr>
+  <tr>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/2ec1ab6d-46b9-43d2-9e7c-ed45b4604fef" width="90%" />
+    </td>
+    <td align="center">
+      <img src="https://github.com/user-attachments/assets/35fae688-05a6-4786-bd7e-e44c99ad73a2" width="90%" />
+    </td>
+  </tr>
+</table>
